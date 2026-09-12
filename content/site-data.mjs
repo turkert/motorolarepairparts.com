@@ -2,7 +2,7 @@ export const site = {
   name: 'Motorola Repair Parts',
   origin: 'https://motorolarepairparts.com',
   description: 'Independent Motorola repair decision guides, California right-to-repair resources, and current Parts4Cells catalog links.',
-  verifiedOn: '2026-08-23',
+  verifiedOn: '2026-09-12',
 };
 
 export const sources = {
