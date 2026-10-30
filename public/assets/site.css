@@ -236,7 +236,7 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 .content-section [data-p4c-citation] { color: var(--blue); font-weight: 720; text-decoration: underline; text-underline-offset: 3px; }
 .check-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0; list-style: none; }
 .check-list li { position: relative; min-height: 110px; padding: 24px 24px 24px 56px; border: 1px solid var(--line); border-radius: 20px; background: #fff; line-height: 1.55; }
-.check-list li::before { content: '\\2713'; position: absolute; left: 23px; top: 23px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: #08743d; font-size: 12px; font-weight: 800; }
+.check-list li::before { content: '\2713'; position: absolute; left: 23px; top: 23px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--mint); color: #08743d; font-size: 12px; font-weight: 800; }
 .post-checks li::before { content: 'OK'; font-size: 8px; }
 .step-list { display: grid; gap: 12px; padding: 0; list-style: none; counter-reset: steps; }
 .step-list li { display: grid; grid-template-columns: 54px 1fr; gap: 20px; align-items: center; padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
