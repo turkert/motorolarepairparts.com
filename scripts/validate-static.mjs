@@ -36,7 +36,7 @@ function captures(html, pattern) {
 function internalTarget(rawUrl) {
   const clean = rawUrl.split('#')[0].split('?')[0];
   if (!clean || clean === '/') return join(outputDir, 'index.html');
-  if (clean.startsWith('/assets/') || clean === '/og.png' || clean.endsWith('.json') || clean.endsWith('.xml') || clean.endsWith('.txt')) return join(outputDir, ...clean.slice(1).split('/'));
+  if (clean.startsWith('/assets/') || /\.(png|svg|json|xml|txt)$/.test(clean)) return join(outputDir, ...clean.slice(1).split('/'));
   return join(outputDir, ...clean.replace(/^\/+|\/+$/g, '').split('/'), 'index.html');
 }
 
@@ -81,6 +81,8 @@ for (const file of htmlFiles) {
   const h1s = captures(html, /<h1>([^<]+)<\/h1>/g);
   check(titles.length === 1, `${displayFile}: expected one title, found ${titles.length}`);
   check(descriptions.length === 1, `${displayFile}: expected one meta description, found ${descriptions.length}`);
+  if (titles[0]) check(titles[0].length <= 70, `${displayFile}: title is ${titles[0].length} characters, expected 70 or fewer`);
+  if (descriptions[0]) check(descriptions[0].length <= 160, `${displayFile}: meta description is ${descriptions[0].length} characters, expected 160 or fewer`);
   check(canonicals.length === 1, `${displayFile}: expected one canonical, found ${canonicals.length}`);
   check(h1s.length === 1, `${displayFile}: expected one H1, found ${h1s.length}`);
   check(html.includes('<meta property="og:image" content="https://motorolarepairparts.com/og.png">'), `${displayFile}: missing social-preview metadata`);
@@ -173,6 +175,9 @@ check(!sitemapUrls.some((url) => /\/(?:disclosure|editorial)\//.test(url)), 'Sit
 check(!sitemapUrls.includes(`${site.origin}/404/`), 'Sitemap contains the 404 route');
 for (const guide of allGuides) check(sitemapUrls.includes(`${site.origin}/guides/${guide.slug}/`), `Sitemap is missing ${guide.slug}`);
 
+const llms = await readFile(join(outputDir, 'llms.txt'), 'utf8');
+check(llms.startsWith('# Motorola Repair Parts') && llms.includes(`${site.origin}/guides/`), 'llms.txt is missing or incomplete');
+for (const icon of ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) check(await exists(join(outputDir, icon)), `${icon} is missing`);
 const robots = await readFile(join(outputDir, 'robots.txt'), 'utf8');
 check(robots.includes('User-agent: *\nAllow: /'), 'robots.txt does not allow crawling');
 check(robots.includes(`Sitemap: ${site.origin}/sitemap.xml`), 'robots.txt has the wrong sitemap URL');

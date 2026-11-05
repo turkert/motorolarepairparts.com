@@ -20,8 +20,8 @@ const esc = (value) => String(value)
 const routeUrl = (route = '') => `${site.origin}/${route.replace(/^\/+|\/+$/g, '')}${route ? '/' : ''}`;
 const guideUrl = (guide) => routeUrl(`guides/${guide.slug}`);
 
-function head({ title, description, route = '', schema = null, noindex = false }) {
-  const pageTitle = title === site.name ? title : `${title} | ${site.name}`;
+function head({ title, description, route = '', schema = null, noindex = false, fullTitle = null }) {
+  const pageTitle = fullTitle || (title === site.name ? title : `${title} | ${site.name}`);
   const canonical = routeUrl(route);
   const robots = noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
   const jsonLd = schema ? `<script type="application/ld+json">${JSON.stringify(schema).replaceAll('<', '\\u003c')}</script>` : '';
@@ -46,7 +46,9 @@ function head({ title, description, route = '', schema = null, noindex = false }
   <meta name="twitter:title" content="${esc(pageTitle)}">
   <meta name="twitter:description" content="${esc(description)}">
   <meta name="twitter:image" content="${site.origin}/og.png">
-  <link rel="icon" type="image/png" href="/og.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/assets/site.css">
   <script defer src="/assets/site.js"></script>
   ${jsonLd}
@@ -141,10 +143,75 @@ function guideIndexPage() {
 </main>${footer()}`;
 }
 
+// Search-result titles and descriptions for guides (2026-11-05): keep titles near 60 characters
+// and descriptions under 160 so the model name, XT code and component stay visible in results.
+const titleTopic = {
+  'back-cover': 'back cover',
+  'front-camera-sensors': 'front camera and sensor',
+  'microphone-audio-flex': 'microphone',
+  'sim-tray-reader': 'SIM tray',
+  'power-volume-buttons': 'power and volume button',
+  'display-adhesive-seal': 'display adhesive',
+  'camera-lens-cover': 'camera lens cover',
+};
+const titleShortName = (model) => model.shortName.replace(' / G86 Power 5G', ' and G86 Power');
+const xtBase = (model) => (model.xtCode.includes('/') ? model.xtCode.split('-')[0] : model.xtCode);
+
+function guideMetaTitle(model, topic) {
+  const full = topic.name.toLowerCase().replace('sim ', 'SIM ');
+  const short = titleTopic[topic.slug.replace('-rear-housing', '')] || full;
+  const candidates = [
+    `${model.shortName} ${full} repair guide (${xtBase(model)}) | ${site.name}`,
+    `${model.shortName} ${short} repair guide (${xtBase(model)}) | ${site.name}`,
+    `${model.shortName} ${full} repair guide (${xtBase(model)})`,
+    `${model.shortName} ${short} repair guide (${xtBase(model)})`,
+    `${titleShortName(model)} ${short} repair (${xtBase(model)})`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 62) || candidates[candidates.length - 1];
+}
+
+function guideMetaDescription(model, topic) {
+  const part = topic.partLabel;
+  const candidates = [
+    `${model.shortName} (${model.xtCode}) ${part} repair: symptoms to confirm, checks before ordering, risks, post-repair tests, Motorola sources and the live parts category.`,
+    `${model.shortName} (${model.xtCode}) ${part} repair: symptoms, checks before ordering, risks, post-repair tests and the live parts category.`,
+    `${model.shortName} (${model.xtCode}) ${part}: symptoms, checks before ordering, risks, post-repair tests and the live parts category.`,
+    `${model.shortName} (${model.xtCode}) ${part}: symptoms, pre-order checks, risks, post-repair tests and the live parts category.`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 158) || candidates[candidates.length - 1];
+}
+
+function modelMetaTitle(model) {
+  const candidates = [
+    `${model.shortName} repair guides (${xtBase(model)}) | ${site.name}`,
+    `${model.shortName} repair guides (${xtBase(model)})`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 62) || candidates[candidates.length - 1];
+}
+
+function modelMetaDescription(model) {
+  const candidates = [
+    `15 ${model.shortName} (${model.xtCode}) repair guides by component: display, battery, charging port, cameras and more, with Motorola sources and the live parts category.`,
+    `15 ${model.shortName} (${model.xtCode}) repair guides by component: display, battery, charging port, cameras and more, plus the live parts category.`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 158) || candidates[candidates.length - 1];
+}
+
+function topicMetaTitle(topic) {
+  const name = topic.name.replace(/^./, (letter) => letter.toUpperCase());
+  const candidates = [
+    `${name} repair guides for Motorola phones | ${site.name}`,
+    `Motorola ${topic.name.toLowerCase().replace('sim ', 'SIM ')} repair guides | ${site.name}`,
+    `${name} repair guides for Motorola phones`,
+  ];
+  return candidates.find((candidate) => candidate.length <= 62) || candidates[candidates.length - 1];
+}
+
 function guidePage(guide) {
   const { model, topic } = guide;
   const title = `${model.name} ${topic.name.toLowerCase()} repair guide`;
-  const description = `${model.name} ${topic.name.toLowerCase()} diagnosis, sourcing, safety, and postrepair verification guide with a direct current Parts4Cells model-category link.`;
+  const metaTitle = guideMetaTitle(model, topic);
+  const description = guideMetaDescription(model, topic);
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -156,7 +223,7 @@ function guidePage(guide) {
     about: [{ '@type': 'Thing', name: model.name }, { '@type': 'Thing', name: topic.name }],
   };
   const related = topics.filter((candidate) => candidate.slug !== topic.slug).slice(0, 3).map((candidate) => allGuides.find((item) => item.model.slug === model.slug && item.topic.slug === candidate.slug));
-  return `${head({ title, description, route: `guides/${guide.slug}`, schema })}${header()}<main id="main" class="article-shell">
+  return `${head({ title, description, route: `guides/${guide.slug}`, schema, fullTitle: metaTitle })}${header()}<main id="main" class="article-shell">
   <article>
     <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/guides/">Guides</a><span>/</span><a href="/models/${model.slug}/">${esc(model.shortName)}</a><span>/</span><span>${esc(topic.name)}</span></nav>
     <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${site.verifiedOn}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
@@ -176,12 +243,12 @@ function guidePage(guide) {
 }
 
 function modelsIndexPage() {
-  return `${head({ title: 'Motorola Model Guide Index', description: `Browse 15 repair guides and direct current Parts4Cells category links for ${models.length} Motorola model records.`, route: 'models' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">20 device hubs</p><h1>Choose the exact XT model code.</h1><p>Names reused across years are not interchangeable records. Start with the complete model name and XT code, then choose the repair topic.</p></section><section class="model-grid">${models.map((model) => `<article class="model-card"><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p><a href="/models/${model.slug}/">View 15 guides <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: 'Motorola Model Guide Index', description: `Choose a Motorola phone by XT code: ${models.length} model hubs, each with 15 component repair guides, Motorola support sources and a live parts category.`, route: 'models' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">20 device hubs</p><h1>Choose the exact XT model code.</h1><p>Names reused across years are not interchangeable records. Start with the complete model name and XT code, then choose the repair topic.</p></section><section class="model-grid">${models.map((model) => `<article class="model-card"><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p><a href="/models/${model.slug}/">View 15 guides <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function modelPage(model) {
   const guides = allGuides.filter((guide) => guide.model.slug === model.slug);
-  return `${head({ title: `${model.name} Repair Guides`, description: `Fifteen ${model.name} repair decision guides with Motorola support sources and a direct current Parts4Cells category link.`, route: `models/${model.slug}` })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/models/">Models</a><span>/</span><span>${esc(model.shortName)}</span></nav><section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${sources.motorolaSupport}">Open Motorola Support</a></div></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: `${model.name} Repair Guides`, description: modelMetaDescription(model), route: `models/${model.slug}`, fullTitle: modelMetaTitle(model) })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/models/">Models</a><span>/</span><span>${esc(model.shortName)}</span></nav><section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${sources.motorolaSupport}">Open Motorola Support</a></div></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function topicsIndexPage() {
@@ -190,7 +257,7 @@ function topicsIndexPage() {
 
 function topicPage(topic) {
   const guides = allGuides.filter((guide) => guide.topic.slug === topic.slug);
-  return `${head({ title: `${topic.name} Repair Guides`, description: `${topic.name} diagnosis and parts-selection guides across ${models.length} Motorola model categories.`, route: `topics/${topic.slug}` })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/topics/">Topics</a><span>/</span><span>${esc(topic.name)}</span></nav><section class="page-hero"><p class="eyebrow">20 model guides</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}</p></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: `${topic.name} Repair Guides`, description: topic.summary, route: `topics/${topic.slug}`, fullTitle: topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/topics/">Topics</a><span>/</span><span>${esc(topic.name)}</span></nav><section class="page-hero"><p class="eyebrow">20 model guides</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}</p></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function rightToRepairPage() {
@@ -210,6 +277,39 @@ function simplePage({ title, eyebrow, description, route, body, noindex = false 
   return `${head({ title, description, route, noindex })}${header()}<main id="main" class="article-shell"><article><header class="article-hero"><p class="eyebrow">${esc(eyebrow)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(description)}</p></header>${body}</article></main>${footer()}`;
 }
 
+function llmsText() {
+  const lines = [
+    `# ${site.name}`,
+    '',
+    `> ${site.description} ${allGuides.length} model-and-component repair decision guides for ${models.length} XT-coded Motorola phones and ${topics.length} component topics.`,
+    '',
+    'Each guide covers symptoms to confirm, checks before ordering, risks, and post-repair tests for one Motorola model and one component. Guides are diagnosis and sourcing briefs, not disassembly procedures. Manufacturer repair information comes from Motorola Support; legal information comes from California sources.',
+    '',
+    `Citation guidance: ${citationRule} A model category is a sourcing destination, not proof that a specific part is available or compatible.`,
+    '',
+    '## Start here',
+    `- [Repair guide library](${routeUrl('guides')}): search all ${allGuides.length} guides by model, XT code, or component`,
+    `- [Motorola models by XT code](${routeUrl('models')}): ${models.length} model hubs`,
+    `- [Repair topics](${routeUrl('topics')}): ${topics.length} component hubs`,
+    `- [California Right to Repair Act (SB 244)](${routeUrl('right-to-repair')}): primary-source explainer`,
+    `- [Parts directory](${routeUrl('parts')}): current Parts4Cells model categories`,
+    `- [Source library](${routeUrl('sources')}): sources used and citation rules`,
+    `- [Guide index data](${site.origin}/guide-index.json): JSON list of every guide with model, XT code, topic, and parts category`,
+    '',
+    '## Model hubs',
+    ...models.map((model) => `- [${model.name}](${routeUrl(`models/${model.slug}`)})`),
+    '',
+    '## Component topics',
+    ...topics.map((topic) => `- [${topic.name}](${routeUrl(`topics/${topic.slug}`)}): ${topic.summary}`),
+    '',
+    '## Optional',
+    `- [Privacy](${routeUrl('privacy')})`,
+    `- [Sitemap](${site.origin}/sitemap.xml)`,
+    '',
+  ];
+  return lines.join('\n');
+}
+
 async function writeRoute(route, html) {
   const target = route ? join(outputDir, route, 'index.html') : join(outputDir, 'index.html');
   await mkdir(dirname(target), { recursive: true });
@@ -220,6 +320,7 @@ await rm(outputDir, { recursive: true, force: true });
 await mkdir(join(outputDir, 'assets'), { recursive: true });
 await cp(join(projectRoot, 'public', 'assets'), join(outputDir, 'assets'), { recursive: true });
 await cp(join(projectRoot, 'public', 'og.png'), join(outputDir, 'og.png'));
+for (const icon of ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) await cp(join(projectRoot, 'public', icon), join(outputDir, icon));
 
 await writeRoute('', homePage());
 await writeRoute('guides', guideIndexPage());
@@ -229,9 +330,9 @@ await writeRoute('right-to-repair', rightToRepairPage());
 await writeRoute('parts', partsPage());
 await writeRoute('sources', sourcesPage());
 await writeRoute('privacy', simplePage({
-  title: 'Privacy', eyebrow: 'Minimal data by design', route: 'privacy',
-  description: 'The static site does not require an account, form submission, advertising tracker, or local-storage profile.',
-  body: `<section class="content-section"><h2>What the site collects</h2><p>The website itself does not collect form entries or create user accounts. The guide search runs in the browser and does not send search text to a site application.</p></section><section class="content-section"><h2>External links</h2><p>When you follow a link to California, Motorola, GitHub, or Parts4Cells, that destination's own privacy terms and server logs apply.</p></section><section class="content-section"><h2>Hosting logs</h2><p>The hosting provider may process standard request data needed to deliver and secure the site. This page will be updated if analytics or another data-processing feature is introduced.</p></section>`,
+  title: 'Privacy', eyebrow: 'Updated November 5, 2026', route: 'privacy',
+  description: 'No account or form is needed to use this site. Microsoft Clarity analytics measures how pages are used so the guides can be improved.',
+  body: `<section class="content-section"><h2>What the site collects</h2><p>The website itself does not collect form entries or create user accounts. The guide search runs in the browser and does not send search text to a site application.</p></section><section class="content-section"><h2>Microsoft Clarity analytics</h2><p>Since October 31, 2026, every page loads Microsoft Clarity. Clarity captures how visitors use and interact with the site through behavioral metrics, heatmaps, and session replay. We use that information to find pages that are hard to read or use and to improve them.</p><p>Clarity uses first-party cookies, such as <code>_clck</code> and <code>_clsk</code>, to connect page views into a session, and Microsoft third-party cookies. Microsoft lists them on its <a href="https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-cookies">Clarity cookies page</a>. For how Microsoft collects and uses data, read the <a href="https://www.microsoft.com/privacy/privacystatement">Microsoft Privacy Statement</a>.</p></section><section class="content-section"><h2>External links</h2><p>When you follow a link to California, Motorola, Microsoft, GitHub, or Parts4Cells, that destination's own privacy terms and server logs apply.</p></section><section class="content-section"><h2>Hosting logs</h2><p>The hosting provider may process standard request data needed to deliver and secure the site.</p></section>`,
 }));
 
 for (const guide of allGuides) await writeRoute(`guides/${guide.slug}`, guidePage(guide));
@@ -244,9 +345,14 @@ const sitemapRoutes = [
   ...models.map((model) => `models/${model.slug}`),
   ...topics.map((topic) => `topics/${topic.slug}`),
 ];
-const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapRoutes.map((route) => `  <url><loc>${routeUrl(route)}</loc><lastmod>${site.verifiedOn}</lastmod></url>`).join('\n')}\n</urlset>\n`;
+// Pages whose title, description or visible text changed on 2026-11-05 (metadata refresh and privacy update).
+const metadataRefreshedOn = '2026-11-05';
+const refreshedRoute = (route) => route === 'privacy' || route === 'models' || /^(guides|models|topics)\/./.test(route);
+const lastmodFor = (route) => (refreshedRoute(route) ? metadataRefreshedOn : site.verifiedOn);
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapRoutes.map((route) => `  <url><loc>${routeUrl(route)}</loc><lastmod>${lastmodFor(route)}</lastmod></url>`).join('\n')}\n</urlset>\n`;
 await writeFile(join(outputDir, 'sitemap.xml'), sitemap, 'utf8');
 await writeFile(join(outputDir, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${site.origin}/sitemap.xml\n`, 'utf8');
+await writeFile(join(outputDir, 'llms.txt'), llmsText(), 'utf8');
 await writeFile(join(outputDir, 'CNAME'), 'motorolarepairparts.com\n', 'utf8');
 await writeFile(join(outputDir, '.nojekyll'), '', 'utf8');
 await writeFile(join(outputDir, '404.html'), simplePage({ title: 'Page Not Found', eyebrow: '404', description: 'That repair guide or page could not be found.', route: '404', noindex: true, body: `<section class="content-section"><p><a class="button button-primary" href="/guides/">Browse all repair guides</a></p></section>` }), 'utf8');
