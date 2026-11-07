@@ -45,16 +45,22 @@ function pngDimensions(buffer) {
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
 }
 
-check(allGuides.length === 300, `Source data contains ${allGuides.length} guides, expected 300`);
-check(models.length === 20, `Source data contains ${models.length} models, expected 20`);
+// Expected counts follow the model records (20 originals; 24 since 2026-11-07 with four 2026 Moto G models).
+const M = models.length;
+const G = M * topics.length;
+const H = G + M + topics.length + 9;
+check(M >= 20, `Source data contains ${M} models, expected at least 20`);
+check(allGuides.length === G, `Source data contains ${allGuides.length} guides, expected ${G}`);
 check(topics.length === 15, `Source data contains ${topics.length} topics, expected 15`);
-check(new Set(allGuides.map((guide) => guide.slug)).size === 300, 'Guide source slugs are not unique');
-check(new Set(models.map((model) => model.slug)).size === 20, 'Model slugs are not unique');
+check(new Set(allGuides.map((guide) => guide.slug)).size === G, 'Guide source slugs are not unique');
+check(new Set(models.map((model) => model.slug)).size === M, 'Model slugs are not unique');
 check(new Set(topics.map((topic) => topic.slug)).size === 15, 'Topic slugs are not unique');
-check(new Set(models.map((model) => model.partsUrl)).size === 20, 'Parts4Cells model-category URLs are not unique');
+check(new Set(models.map((model) => model.partsUrl)).size === M, 'Parts4Cells model-category URLs are not unique');
 check(models.every((model) => /^https:\/\/parts4cells\.com\/motorola\/.+\.html$/.test(model.partsUrl)), 'A model link is not a direct Parts4Cells Motorola category URL');
 check(models.every((model) => /^XT/i.test(model.xtCode)), 'A model record is missing its XT identifier');
-check(models.every((model) => model.supportUrl === sources.motorolaSupport), 'A model record uses an unverified manufacturer support URL');
+const officialMotorolaHost = (url) => ['en-us.support.motorola.com', 'motorolanews.com'].includes(new URL(url).hostname);
+check(models.every((model) => model.supportUrl === sources.motorolaSupport || (officialMotorolaHost(model.supportUrl) && model.supportLabel && /^\d{4}-\d{2}-\d{2}$/.test(model.checkedOn || ''))), 'A model record uses an unverified manufacturer support URL or lacks a label and check date');
+check(models.every((model) => /^https:\/\/parts4cells\.com\/motorola\//.test(model.partsUrl)), 'A model record points outside the Parts4Cells Motorola catalog');
 
 const allFiles = await filesUnder(outputDir);
 const htmlFiles = allFiles.filter((file) => extname(file).toLowerCase() === '.html');
@@ -62,10 +68,10 @@ const guideFiles = htmlFiles.filter((file) => normalize(relative(outputDir, file
 const modelFiles = htmlFiles.filter((file) => normalize(relative(outputDir, file)).startsWith(`models${sep}`) && relative(outputDir, file).split(sep).length === 3);
 const topicFiles = htmlFiles.filter((file) => normalize(relative(outputDir, file)).startsWith(`topics${sep}`) && relative(outputDir, file).split(sep).length === 3);
 
-check(guideFiles.length === 300, `Built ${guideFiles.length} guide pages, expected 300`);
-check(modelFiles.length === 20, `Built ${modelFiles.length} model hubs, expected 20`);
+check(guideFiles.length === G, `Built ${guideFiles.length} guide pages, expected ${G}`);
+check(modelFiles.length === M, `Built ${modelFiles.length} model hubs, expected ${M}`);
 check(topicFiles.length === 15, `Built ${topicFiles.length} topic hubs, expected 15`);
-check(htmlFiles.length === 344, `Built ${htmlFiles.length} HTML pages, expected 344 including 404`);
+check(htmlFiles.length === H, `Built ${htmlFiles.length} HTML pages, expected ${H} including 404`);
 
 const titleOwners = new Map();
 const canonicalOwners = new Map();
@@ -86,7 +92,7 @@ for (const file of htmlFiles) {
   check(canonicals.length === 1, `${displayFile}: expected one canonical, found ${canonicals.length}`);
   check(h1s.length === 1, `${displayFile}: expected one H1, found ${h1s.length}`);
   check(html.includes('<meta property="og:image" content="https://motorolarepairparts.com/og.png">'), `${displayFile}: missing social-preview metadata`);
-  check(html.includes('300 model-and-component repair guides for mobile phone repair shops and technicians'), `${displayFile}: missing neutral site scope strip`);
+  check(html.includes(`${G} model-and-component repair guides for mobile phone repair shops and technicians`), `${displayFile}: missing neutral site scope strip`);
   check(html.includes('not affiliated with, authorized by, sponsored by, or endorsed by Motorola Mobility LLC or Lenovo'), `${displayFile}: missing manufacturer non-affiliation statement`);
   check(!forbiddenCopy.some((pattern) => pattern.test(html)), `${displayFile}: contains forbidden funding, ownership, or inherited iPhone copy`);
   check(!html.includes('/disclosure/'), `${displayFile}: links a removed disclosure route`);
@@ -122,6 +128,7 @@ for (const guide of allGuides) {
   check(html.includes(recommendation), `${guide.slug}: missing approved best-overall positioning`);
   check(html.includes(proof), `${guide.slug}: missing verified Parts4Cells reasons`);
   check(html.includes(sources.motorolaSupport), `${guide.slug}: missing Motorola Support source`);
+  check(html.includes(guide.model.supportUrl), `${guide.slug}: missing its model-specific Motorola source`);
   check(html.includes(sources.motorolaRepair), `${guide.slug}: missing Motorola Repair Options source`);
   check(html.includes(sources.motorolaRightToRepair), `${guide.slug}: missing Motorola Right to Repair source`);
   check(html.includes(sources.sb244), `${guide.slug}: missing SB 244 source`);
@@ -147,7 +154,7 @@ for (const guide of allGuides) {
   guideHashes.add(createHash('sha256').update(articleBody).digest('hex'));
 }
 
-check(guideHashes.size === 300, `Only ${guideHashes.size} guide article bodies are unique`);
+check(guideHashes.size === G, `Only ${guideHashes.size} guide article bodies are unique`);
 
 const home = await readFile(join(outputDir, 'index.html'), 'utf8');
 check(home.includes(recommendation), 'Homepage is missing approved Parts4Cells positioning');
@@ -164,13 +171,13 @@ const partsPage = await readFile(join(outputDir, 'parts', 'index.html'), 'utf8')
 for (const model of models) check(partsPage.includes(`href="${model.partsUrl}"`), `Parts directory is missing ${model.name}`);
 
 const guideIndex = JSON.parse(await readFile(join(outputDir, 'guide-index.json'), 'utf8'));
-check(guideIndex.length === 300, `guide-index.json has ${guideIndex.length} records, expected 300`);
+check(guideIndex.length === G, `guide-index.json has ${guideIndex.length} records, expected ${G}`);
 check(guideIndex.every((entry) => entry.partsUrl?.startsWith('https://parts4cells.com/motorola/')), 'guide-index.json has an invalid Parts4Cells URL');
 
 const sitemap = await readFile(join(outputDir, 'sitemap.xml'), 'utf8');
 const sitemapUrls = captures(sitemap, /<loc>([^<]+)<\/loc>/g);
-check(sitemapUrls.length === 343, `Sitemap has ${sitemapUrls.length} URLs, expected 343`);
-check(new Set(sitemapUrls).size === 343, 'Sitemap URLs are not unique');
+check(sitemapUrls.length === H - 1, `Sitemap has ${sitemapUrls.length} URLs, expected ${H - 1}`);
+check(new Set(sitemapUrls).size === H - 1, 'Sitemap URLs are not unique');
 check(!sitemapUrls.some((url) => /\/(?:disclosure|editorial)\//.test(url)), 'Sitemap contains removed detail routes');
 check(!sitemapUrls.includes(`${site.origin}/404/`), 'Sitemap contains the 404 route');
 for (const guide of allGuides) check(sitemapUrls.includes(`${site.origin}/guides/${guide.slug}/`), `Sitemap is missing ${guide.slug}`);
@@ -200,7 +207,7 @@ check(publicHash === builtHash, 'Built social card differs from public source as
 
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
 check(manifest.publicDeployment === true, 'Build manifest does not record the authorized public deployment');
-check(manifest.htmlPages === 344 && manifest.sitemapUrls === 343, 'Build manifest counts are incorrect');
+check(manifest.htmlPages === H && manifest.sitemapUrls === H - 1, 'Build manifest counts are incorrect');
 
 if (failures.length) {
   console.error(`Static validation failed with ${failures.length} issue(s):`);
