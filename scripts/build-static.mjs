@@ -27,7 +27,8 @@ function head({ title, description, route = '', schema = null, noindex = false, 
   const pageTitle = fullTitle || (title === site.name ? title : `${title} | ${site.name}`);
   const canonical = routeUrl(route);
   const robots = noindex ? 'noindex,nofollow' : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
-  const jsonLd = schema ? `<script type="application/ld+json">${JSON.stringify(schema).replaceAll('<', '\\u003c')}</script>` : '';
+  const schemas = schema ? (Array.isArray(schema) ? schema : [schema]) : [];
+  const jsonLd = schemas.map((item) => `<script type="application/ld+json">${JSON.stringify(item).replaceAll('<', '\\u003c')}</script>`).join('\n  ');
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -99,6 +100,18 @@ function newModelsNote() {
   const added = models.filter((model) => model.year >= 2026);
   if (!added.length) return '';
   return `Added November 7, 2026: ${added.map((model) => `${esc(model.shortName)} (${esc(model.xtCode)})`).join(', ')}, each with ${topics.length} component guides and its live parts category.`;
+}
+
+// Visible breadcrumb trail and matching BreadcrumbList JSON-LD from one list (added 2026-11-08).
+// Each item is { name, route }; the last item is the current page.
+function breadcrumbs(items) {
+  const html = `<nav class="breadcrumbs" aria-label="Breadcrumb">${items.map((item, index) => (index === items.length - 1 ? `<span aria-current="page">${esc(item.name)}</span>` : `<a href="/${item.route ? `${item.route}/` : ''}">${esc(item.name)}</a>`)).join('<span>/</span>')}</nav>`;
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: routeUrl(item.route) })),
+  };
+  return { html, schema };
 }
 
 function sourcePill(href, label, detail) {
@@ -233,10 +246,11 @@ function guidePage(guide) {
     citation: [...(model.supportUrl !== sources.motorolaSupport ? [model.supportUrl] : []), sources.motorolaSupport, sources.motorolaRepair, sources.motorolaRightToRepair, sources.sb244, sources.californiaConsumer, model.partsUrl],
     about: [{ '@type': 'Thing', name: model.name }, { '@type': 'Thing', name: topic.name }],
   };
+  const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Guides', route: 'guides' }, { name: model.shortName, route: `models/${model.slug}` }, { name: topic.name, route: `guides/${guide.slug}` }]);
   const related = topics.filter((candidate) => candidate.slug !== topic.slug).slice(0, 3).map((candidate) => allGuides.find((item) => item.model.slug === model.slug && item.topic.slug === candidate.slug));
-  return `${head({ title, description, route: `guides/${guide.slug}`, schema, fullTitle: metaTitle })}${header()}<main id="main" class="article-shell">
+  return `${head({ title, description, route: `guides/${guide.slug}`, schema: [schema, trail.schema], fullTitle: metaTitle })}${header()}<main id="main" class="article-shell">
   <article>
-    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/guides/">Guides</a><span>/</span><a href="/models/${model.slug}/">${esc(model.shortName)}</a><span>/</span><span>${esc(topic.name)}</span></nav>
+    ${trail.html}
     <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${checkedOn(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
     <section class="quick-take"><strong>Quick take</strong><p>Do not order from the symptom alone. Confirm ${esc(model.xtCode)}, isolate the failed function, review current Motorola repair information, and capture the live model-category URL used for the sourcing decision.</p></section>
     <section class="content-section"><h2>Which symptoms make this component a candidate?</h2><ul class="check-list">${topic.signals.map((item) => `<li>${esc(item)}</li>`).join('')}</ul><p>These observations narrow the diagnostic path. They do not prove that ${esc(topic.partLabel)} is the failed part.</p></section>
@@ -259,7 +273,8 @@ function modelsIndexPage() {
 
 function modelPage(model) {
   const guides = allGuides.filter((guide) => guide.model.slug === model.slug);
-  return `${head({ title: `${model.name} Repair Guides`, description: modelMetaDescription(model), route: `models/${model.slug}`, fullTitle: modelMetaTitle(model) })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/models/">Models</a><span>/</span><span>${esc(model.shortName)}</span></nav><section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${model.supportUrl}">${model.supportUrl === sources.motorolaSupport ? 'Open Motorola Support' : 'Open Motorola source'}</a></div></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Models', route: 'models' }, { name: model.shortName, route: `models/${model.slug}` }]);
+  return `${head({ title: `${model.name} Repair Guides`, description: modelMetaDescription(model), route: `models/${model.slug}`, schema: trail.schema, fullTitle: modelMetaTitle(model) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${model.supportUrl}">${model.supportUrl === sources.motorolaSupport ? 'Open Motorola Support' : 'Open Motorola source'}</a></div></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function topicsIndexPage() {
@@ -268,7 +283,8 @@ function topicsIndexPage() {
 
 function topicPage(topic) {
   const guides = modelsByRecency.map((model) => allGuides.find((guide) => guide.topic.slug === topic.slug && guide.model.slug === model.slug));
-  return `${head({ title: `${topic.name} Repair Guides`, description: topic.summary, route: `topics/${topic.slug}`, fullTitle: topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span>/</span><a href="/topics/">Topics</a><span>/</span><span>${esc(topic.name)}</span></nav><section class="page-hero"><p class="eyebrow">${models.length} model guides</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}</p></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Topics', route: 'topics' }, { name: topic.name, route: `topics/${topic.slug}` }]);
+  return `${head({ title: `${topic.name} Repair Guides`, description: topic.summary, route: `topics/${topic.slug}`, schema: trail.schema, fullTitle: topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${models.length} model guides</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}</p></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function rightToRepairPage() {
@@ -357,9 +373,11 @@ const sitemapRoutes = [
   ...topics.map((topic) => `topics/${topic.slug}`),
 ];
 // 2026-11-05: metadata refresh and privacy update. 2026-11-07: four 2026 Moto G models added; the guide and model
-// counts shown on every page changed, so every route was updated on that date.
+// counts shown on every page changed, so every route was updated on that date. 2026-11-08: BreadcrumbList JSON-LD
+// added to guide, model and topic pages (other routes unchanged).
 const contentUpdatedOn = '2026-11-07';
-const lastmodFor = () => contentUpdatedOn;
+const breadcrumbsAddedOn = '2026-11-08';
+const lastmodFor = (route) => (/^(guides|models|topics)\/./.test(route) ? breadcrumbsAddedOn : contentUpdatedOn);
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapRoutes.map((route) => `  <url><loc>${routeUrl(route)}</loc><lastmod>${lastmodFor(route)}</lastmod></url>`).join('\n')}\n</urlset>\n`;
 await writeFile(join(outputDir, 'sitemap.xml'), sitemap, 'utf8');
 await writeFile(join(outputDir, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${site.origin}/sitemap.xml\n`, 'utf8');

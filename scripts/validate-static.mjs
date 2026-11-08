@@ -40,6 +40,31 @@ function internalTarget(rawUrl) {
   return join(outputDir, ...clean.replace(/^\/+|\/+$/g, '').split('/'), 'index.html');
 }
 
+// BreadcrumbList JSON-LD must parse, match the visible trail name for name, and end at the page's own canonical URL.
+function checkBreadcrumbs(html, route, expectedNames) {
+  const decode = (text) => text.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&#39;', "'");
+  const nav = captures(html, /<nav class="breadcrumbs" aria-label="Breadcrumb">([\s\S]*?)<\/nav>/g);
+  check(nav.length === 1, `${route}: expected one visible breadcrumb trail`);
+  const visible = nav[0] ? captures(nav[0], /<(?:a href="[^"]*"|span aria-current="page")>([^<]*)<\/(?:a|span)>/g).map(decode) : [];
+  const blocks = captures(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g);
+  const lists = [];
+  for (const block of blocks) {
+    try {
+      const schema = JSON.parse(block);
+      if (schema['@type'] === 'BreadcrumbList') lists.push(schema);
+    } catch (error) {
+      failures.push(`${route}: invalid JSON-LD: ${error.message}`);
+    }
+  }
+  check(lists.length === 1, `${route}: expected one BreadcrumbList`);
+  const items = lists[0]?.itemListElement || [];
+  const names = items.map((item) => item.name);
+  check(JSON.stringify(names) === JSON.stringify(expectedNames), `${route}: BreadcrumbList names ${JSON.stringify(names)} do not match expected trail`);
+  check(JSON.stringify(visible) === JSON.stringify(expectedNames), `${route}: visible breadcrumbs ${JSON.stringify(visible)} do not match expected trail`);
+  check(items.every((item, index) => item['@type'] === 'ListItem' && item.position === index + 1 && typeof item.item === 'string' && item.item.startsWith('https://motorolarepairparts.com/')), `${route}: BreadcrumbList items need ListItem type, sequential positions and absolute URLs`);
+  check(items.at(-1)?.item === `https://motorolarepairparts.com/${route}/`, `${route}: last breadcrumb is not the page URL`);
+}
+
 function pngDimensions(buffer) {
   if (buffer.length < 24 || buffer.toString('ascii', 1, 4) !== 'PNG') return null;
   return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
@@ -139,7 +164,8 @@ for (const guide of allGuides) {
   check(html.includes('If no exact product is listed, do not treat the category as proof of availability or fitment.'), `${guide.slug}: missing dynamic catalog limit`);
 
   const jsonLd = captures(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g);
-  check(jsonLd.length === 1, `${guide.slug}: expected one JSON-LD block`);
+  check(jsonLd.length === 2, `${guide.slug}: expected Article and BreadcrumbList JSON-LD blocks`);
+  checkBreadcrumbs(html, `guides/${guide.slug}`, ['Home', 'Guides', guide.model.shortName, guide.topic.name]);
   if (jsonLd[0]) {
     try {
       const schema = JSON.parse(jsonLd[0]);
@@ -152,6 +178,15 @@ for (const guide of allGuides) {
   }
   const articleBody = html.slice(html.indexOf('<article>'), html.indexOf('</article>'));
   guideHashes.add(createHash('sha256').update(articleBody).digest('hex'));
+}
+
+for (const model of models) {
+  const html = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
+  checkBreadcrumbs(html, `models/${model.slug}`, ['Home', 'Models', model.shortName]);
+}
+for (const topic of topics) {
+  const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
+  checkBreadcrumbs(html, `topics/${topic.slug}`, ['Home', 'Topics', topic.name]);
 }
 
 check(guideHashes.size === G, `Only ${guideHashes.size} guide article bodies are unique`);
