@@ -85,3 +85,31 @@
 
   update();
 })();
+
+// XT code lookup (2026-11-09): filters the model table on /xt-code/. The table works without JavaScript.
+(() => {
+  const input = document.querySelector('#xt-search');
+  const rows = [...document.querySelectorAll('[data-xt-row]')];
+  const count = document.querySelector('#xt-count');
+  const empty = document.querySelector('#xt-empty');
+  if (!(input instanceof HTMLInputElement) || !rows.length) return;
+  const normalize = (value) => {
+    const compact = value.trim().toLowerCase().replace(/\s+/g, '');
+    return /^xt\d{4}/.test(compact) ? compact.slice(0, 6) : compact;
+  };
+  const update = () => {
+    const query = normalize(input.value);
+    let visible = 0;
+    for (const row of rows) {
+      const matches = !query || (row.getAttribute('data-search') || '').includes(query);
+      row.hidden = !matches;
+      if (matches) visible += 1;
+    }
+    if (count) count.textContent = visible === rows.length ? `Showing all ${rows.length} model records` : `Showing ${visible} of ${rows.length} model records`;
+    if (empty) empty.hidden = visible !== 0;
+  };
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('xt')) input.value = params.get('xt');
+  input.addEventListener('input', update);
+  update();
+})();
