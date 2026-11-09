@@ -73,7 +73,7 @@ function pngDimensions(buffer) {
 // Expected counts follow the model records (20 originals; 24 since 2026-11-07 with four 2026 Moto G models).
 const M = models.length;
 const G = M * topics.length;
-const H = G + M + topics.length + 9;
+const H = G + M + topics.length + 10; // 10 = home, 6 index/reference pages, privacy, xt-code (2026-11-09), 404
 check(M >= 20, `Source data contains ${M} models, expected at least 20`);
 check(allGuides.length === G, `Source data contains ${allGuides.length} guides, expected ${G}`);
 check(topics.length === 15, `Source data contains ${topics.length} topics, expected 15`);
@@ -189,6 +189,24 @@ for (const topic of topics) {
   checkBreadcrumbs(html, `topics/${topic.slug}`, ['Home', 'Topics', topic.name]);
 }
 
+// XT code lookup page (2026-11-09): one row per model record linking its hub, both Motorola sources, matching trail.
+const xtPage = await readFile(join(outputDir, 'xt-code', 'index.html'), 'utf8');
+checkBreadcrumbs(xtPage, 'xt-code', ['Home', 'Models', 'XT code lookup']);
+check((xtPage.match(/data-xt-row/g) || []).length === M, `xt-code: expected ${M} lookup rows`);
+for (const model of models) check(xtPage.includes(`<th scope="row">${model.xtCode}</th>`) && xtPage.includes(`href="/models/${model.slug}/"`), `xt-code: missing row or hub link for ${model.xtCode}`);
+check(xtPage.includes('https://en-us.support.motorola.com/app/answers/detail/a_id/102296/~/find-my-model-number'), 'xt-code: missing Motorola Find my model number source');
+check(xtPage.includes('https://help.motorola.com/hc/3590/16/na/en-us/T1811041523.html'), 'xt-code: missing moto g 2025 help source');
+check(xtPage.includes('id="xt-search"') && xtPage.includes('id="xt-empty"'), 'xt-code: lookup input or empty state missing');
+for (const block of captures(xtPage, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+  try { JSON.parse(block); } catch (error) { failures.push(`xt-code: invalid JSON-LD: ${error.message}`); }
+}
+for (const route of ['', 'guides', 'models', 'parts']) {
+  const page = await readFile(route ? join(outputDir, route, 'index.html') : join(outputDir, 'index.html'), 'utf8');
+  check(page.includes('href="/xt-code/"'), `${route || 'home'}: missing link to /xt-code/`);
+}
+for (const file of guideFiles) check((await readFile(file, 'utf8')).includes('href="/xt-code/"'), `${relative(outputDir, file)}: missing link to /xt-code/`);
+check(!/[\u2013\u2014]/.test(xtPage), 'xt-code: contains an en or em dash');
+
 check(guideHashes.size === G, `Only ${guideHashes.size} guide article bodies are unique`);
 
 const home = await readFile(join(outputDir, 'index.html'), 'utf8');
@@ -218,7 +236,8 @@ check(!sitemapUrls.includes(`${site.origin}/404/`), 'Sitemap contains the 404 ro
 for (const guide of allGuides) check(sitemapUrls.includes(`${site.origin}/guides/${guide.slug}/`), `Sitemap is missing ${guide.slug}`);
 
 const llms = await readFile(join(outputDir, 'llms.txt'), 'utf8');
-check(llms.startsWith('# Motorola Repair Parts') && llms.includes(`${site.origin}/guides/`), 'llms.txt is missing or incomplete');
+check(llms.startsWith('# Motorola Repair Parts') && llms.includes(`${site.origin}/guides/`) && llms.includes(`${site.origin}/xt-code/`), 'llms.txt is missing or incomplete');
+check(sitemapUrls.includes(`${site.origin}/xt-code/`), 'Sitemap is missing /xt-code/');
 for (const icon of ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) check(await exists(join(outputDir, icon)), `${icon} is missing`);
 const robots = await readFile(join(outputDir, 'robots.txt'), 'utf8');
 check(robots.includes('User-agent: *\nAllow: /'), 'robots.txt does not allow crawling');

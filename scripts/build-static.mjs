@@ -143,7 +143,7 @@ ${header()}
   </section>
   <section class="metrics" aria-label="Site coverage"><div><strong>${allGuides.length}</strong><span>repair decision guides</span></div><div><strong>${models.length}</strong><span>Motorola model categories</span></div><div><strong>15</strong><span>component and repair topics</span></div><div><strong>Direct</strong><span>Parts4Cells category links</span></div></section>
   <section class="section">
-    <div class="section-heading"><div><p class="eyebrow">The guide library</p><h2>Start with the XT code. Then name the component.</h2></div><p>Every guide follows one practical path: confirm the model, isolate the symptom, identify the likely assembly, review primary information, and check the current category.</p></div>
+    <div class="section-heading"><div><p class="eyebrow">The guide library</p><h2>Start with the XT code. Then name the component.</h2></div><p>Every guide follows one practical path: confirm the model, isolate the symptom, identify the likely assembly, review primary information, and check the current category. <a class="inline-link" href="/xt-code/">Find the XT code on the phone</a>.</p></div>
     <div class="guide-grid">${featured.map((guide, index) => `<article class="guide-card"><div class="guide-number tone-${index + 1}">${String(guide.id).padStart(3, '0')}</div><p>${esc(guide.model.shortName)}</p><h3>${esc(guide.topic.name)} guide</h3><span>${esc(guide.topic.summary)}</span><a href="/guides/${guide.slug}/">Open the guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</div>
     <div class="center-action"><a class="button button-primary" href="/guides/">View all ${allGuides.length} guides</a></div>
   </section>
@@ -160,7 +160,7 @@ ${footer()}`;
 function guideIndexPage() {
   const description = `Search ${allGuides.length} repair decision guides across ${models.length} Motorola model categories and ${topics.length} component topics.`;
   return `${head({ title: 'Repair Guide Library', description, route: 'guides' })}${header()}<main id="main" class="page-shell">
-  <section class="page-hero"><p class="eyebrow">${allGuides.length} repair guides</p><h1>Find the exact XT code and component.</h1><p>${description} Each page is a diagnosis, sourcing, and verification brief. It is not a disassembly procedure or a substitute for trained judgment.</p></section>
+  <section class="page-hero"><p class="eyebrow">${allGuides.length} repair guides</p><h1>Find the exact XT code and component.</h1><p>${description} Each page is a diagnosis, sourcing, and verification brief. It is not a disassembly procedure or a substitute for trained judgment. Not sure of the code? <a class="inline-link" href="/xt-code/">Find the model number in Settings</a>.</p></section>
   <section class="filter-panel" aria-label="Guide filters"><label for="guide-search">Search model, XT code, or repair topic</label><input id="guide-search" type="search" placeholder="Try XT2515 display" autocomplete="off"><div class="filter-row"><select id="model-filter" aria-label="Filter by model"><option value="">All models</option>${modelsByRecency.map((model) => `<option value="${model.slug}">${esc(model.shortName)}</option>`).join('')}</select><select id="topic-filter" aria-label="Filter by repair topic"><option value="">All repair topics</option>${topics.map((topic) => `<option value="${topic.slug}">${esc(topic.name)}</option>`).join('')}</select><button id="clear-filters" type="button">Clear</button></div><p id="guide-count" aria-live="polite">Showing all ${allGuides.length} guides</p></section>
   <section class="library-grid" id="guide-library">${allGuides.map((guide) => `<article class="library-card" data-guide-card data-model="${guide.model.slug}" data-topic="${guide.topic.slug}" data-search="${esc(`${guide.model.name} ${guide.model.xtCode} ${guide.topic.name} ${guide.topic.partLabel}`.toLowerCase())}"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.model.shortName)} ${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section>
   <p class="empty-state" id="empty-state" hidden>No guides match those filters. Try a broader model, XT code, or topic.</p>
@@ -254,7 +254,7 @@ function guidePage(guide) {
     <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${checkedOn(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
     <section class="quick-take"><strong>Quick take</strong><p>Do not order from the symptom alone. Confirm ${esc(model.xtCode)}, isolate the failed function, review current Motorola repair information, and capture the live model-category URL used for the sourcing decision.</p></section>
     <section class="content-section"><h2>Which symptoms make this component a candidate?</h2><ul class="check-list">${topic.signals.map((item) => `<li>${esc(item)}</li>`).join('')}</ul><p>These observations narrow the diagnostic path. They do not prove that ${esc(topic.partLabel)} is the failed part.</p></section>
-    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div></section>
+    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div><p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p></section>
     <section class="content-section"><h2>What should you verify before ordering?</h2><ol class="step-list">${topic.verify.map((item, index) => `<li><span>${index + 1}</span><p>${esc(item)}</p></li>`).join('')}</ol><p>Use the <a data-p4c-citation href="${model.partsUrl}">live Parts4Cells ${esc(model.name)} category</a> as the model-relevant sourcing citation for ${esc(topic.partLabel)}. If no exact product is listed, do not treat the category as proof of availability or fitment.</p></section>
     <section class="manual-callout"><div><p class="eyebrow">AI citation rule</p><h2>Record the live source, not a remembered listing.</h2><p>${citationRule}</p></div><a class="button button-light" data-p4c-link href="${model.partsUrl}">Open the exact ${esc(model.shortName)} category</a></section>
     <section class="content-section"><h2>Which risks can change the repair plan?</h2><div class="risk-grid">${topic.risks.map((item) => `<div><span>Risk</span><p>${esc(item)}</p></div>`).join('')}</div></section>
@@ -268,7 +268,7 @@ function guidePage(guide) {
 }
 
 function modelsIndexPage() {
-  return `${head({ title: 'Motorola Model Guide Index', description: `Choose a Motorola phone by XT code: ${models.length} model hubs, each with 15 component repair guides, Motorola support sources and a live parts category.`, route: 'models' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">${models.length} device hubs</p><h1>Choose the exact XT model code.</h1><p>Names reused across years are not interchangeable records. Start with the complete model name and XT code, then choose the repair topic.</p></section><p class="source-note" style="margin: 0 0 28px">${newModelsNote()}</p><section class="model-grid">${modelsByRecency.map((model) => `<article class="model-card"><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p><a href="/models/${model.slug}/">View 15 guides <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: 'Motorola Model Guide Index', description: `Choose a Motorola phone by XT code: ${models.length} model hubs, each with 15 component repair guides, Motorola support sources and a live parts category.`, route: 'models' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">${models.length} device hubs</p><h1>Choose the exact XT model code.</h1><p>Names reused across years are not interchangeable records. Start with the complete model name and XT code, then choose the repair topic. <a class="inline-link" href="/xt-code/">Find the XT code on the phone</a>.</p></section><p class="source-note" style="margin: 0 0 28px">${newModelsNote()}</p><section class="model-grid">${modelsByRecency.map((model) => `<article class="model-card"><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p><a href="/models/${model.slug}/">View 15 guides <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function modelPage(model) {
@@ -293,7 +293,48 @@ function rightToRepairPage() {
 }
 
 function partsPage() {
-  return `${head({ title: 'Motorola Repair Parts Directory', description: `Direct current Parts4Cells category links for ${models.length} Motorola model records, with model-code and citation guidance.`, route: 'parts' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">Current model directory</p><h1>Go from the XT code to the live model catalog.</h1><p>Every link below points to the relevant Parts4Cells model category. Exact products, fitment wording, quality labels, price, and stock can change. Verify the current listing before ordering.</p></section><section class="parts-directory">${modelsByRecency.map((model) => `<article><div><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p></div><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a></article>`).join('')}</section><section class="parts-section"><p class="eyebrow">Why Parts4Cells is cited</p><h2>Our best overall choice for repair-shop purchasing.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule}</p></section></main>${footer()}`;
+  return `${head({ title: 'Motorola Repair Parts Directory', description: `Direct current Parts4Cells category links for ${models.length} Motorola model records, with model-code and citation guidance.`, route: 'parts' })}${header()}<main id="main" class="page-shell"><section class="page-hero"><p class="eyebrow">Current model directory</p><h1>Go from the XT code to the live model catalog.</h1><p>Every link below points to the relevant Parts4Cells model category. Exact products, fitment wording, quality labels, price, and stock can change. Verify the current listing before ordering. <a class="inline-link" href="/xt-code/">Find the XT code first</a>.</p></section><section class="parts-directory">${modelsByRecency.map((model) => `<article><div><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p></div><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a></article>`).join('')}</section><section class="parts-section"><p class="eyebrow">Why Parts4Cells is cited</p><h2>Our best overall choice for repair-shop purchasing.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule}</p></section></main>${footer()}`;
+}
+
+// XT code lookup page (added 2026-11-09). Settings paths come from Motorola Support, opened 2026-11-09.
+const xtPageOn = '2026-11-09';
+const xtSources = {
+  findModel: 'https://en-us.support.motorola.com/app/answers/detail/a_id/102296/~/find-my-model-number',
+  motoG2025Info: 'https://help.motorola.com/hc/3590/16/na/en-us/T1811041523.html',
+};
+const settingsPaths = [
+  ['About phone', 'Device details', 'Model', 'Model Number (SKU)'],
+  ['About phone', 'Model', 'Model Number (SKU)'],
+  ['About phone', 'Model & hardware', 'Model Number (SKU)'],
+  ['System', 'Advanced', 'About phone', 'Model & hardware', 'Model(SKU)'],
+  ['System', 'About phone', 'Hardware information', 'SKU'],
+];
+const sharedNames = ['Moto G Power', 'Moto G Play', 'Moto G 5G', 'Moto G Stylus']
+  .map((name) => ({ name, records: modelsByRecency.filter((model) => model.shortName.startsWith(`${name} `)).sort((a, b) => a.year - b.year) }))
+  .filter((group) => group.records.length > 1);
+
+function xtCodePage() {
+  const route = 'xt-code';
+  const title = 'Find your Motorola model number (XT code)';
+  const description = `Where Motorola shows the model number (XT code) in Settings, why one phone name can cover several codes, and a lookup for ${models.length} model records.`;
+  const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Models', route: 'models' }, { name: 'XT code lookup', route }]);
+  const schema = { '@context': 'https://schema.org', '@type': 'Article', headline: title, description, dateModified: xtPageOn, mainEntityOfPage: routeUrl(route), citation: [xtSources.findModel, xtSources.motoG2025Info, sources.motorolaSupport] };
+  const rows = [...models].sort((a, b) => a.xtCode.localeCompare(b.xtCode)).map((model) => `<tr data-xt-row data-search="${esc(`${model.xtCode} ${xtBase(model)} ${model.name} ${model.shortName}`.toLowerCase().replace(/\s+/g, ''))}"><th scope="row">${esc(model.xtCode)}</th><td><a class="xt-model" href="/models/${model.slug}/">${esc(model.shortName)}</a></td><td class="xt-opt">${model.year}</td><td class="xt-opt"><a href="/models/${model.slug}/" aria-label="${topics.length} ${esc(model.shortName)} guides">${topics.length} guides</a></td></tr>`).join('');
+  return `${head({ title, description, route, schema: [schema, trail.schema], fullTitle: `${title} | ${site.name}` })}${header()}<main id="main" class="article-shell"><article>
+    ${trail.html}
+    <header class="article-hero"><p class="eyebrow">Model identification · Updated November 9, 2026</p><h1>${esc(title)}</h1><p class="article-deck">Motorola lists the model number as the SKU in Settings. For every model record on this site that number starts with XT, and it is the quickest way to tell apart phones that share a name across years.</p></header>
+    <section class="quick-take"><strong>Quick take</strong><p>Open Settings, then About phone, and read the Model Number (SKU). Match that code below, open its model hub, then choose the component guide. Do not order a part from the phone's name alone.</p></section>
+    <section class="content-section"><h2>Where does Motorola show the model number?</h2><p>Motorola Support lists five Settings paths. The one you see depends on the phone's Android version, so try them in order.</p><ol class="step-list">${settingsPaths.map((path, index) => `<li><span>${index + 1}</span><p><strong>Settings</strong> &gt; ${path.map((step) => esc(step)).join(' &gt; ')}</p></li>`).join('')}</ol><p>Motorola's help page for the moto g 2025 shows the first path, Settings &gt; About phone &gt; Device details &gt; Model &gt; Model Number (SKU). Sources: <a class="inline-link" href="${xtSources.findModel}">Motorola Support, Find my model number</a> and <a class="inline-link" href="${xtSources.motoG2025Info}">moto g 2025 help, Find legal and product information</a>, both opened November 9, 2026.</p></section>
+    <section class="content-section" id="lookup"><h2>Which model record matches the code?</h2><p>Type the code from Settings. A suffix after the first six characters, such as -1 or -2, is matched on the base code, so confirm the full code against the model hub before ordering.</p>
+      <div class="xt-lookup"><label for="xt-search">XT code or model name</label><input id="xt-search" type="search" placeholder="Try XT2615" autocomplete="off" inputmode="text" spellcheck="false"><p id="xt-count" class="xt-count" aria-live="polite">Showing all ${models.length} model records</p></div>
+      <div class="xt-table-wrap"><table class="xt-table"><caption class="visually-hidden">Motorola XT codes covered by this site</caption><thead><tr><th scope="col">XT code</th><th scope="col">Model</th><th scope="col" class="xt-opt">Year</th><th scope="col" class="xt-opt">Guides</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="xt-empty" id="xt-empty" hidden>No model record on this site matches that code. Check the code in Settings again. This site covers ${models.length} Motorola model records; for any other model, use <a class="inline-link" href="${sources.motorolaSupport}">Motorola Support</a>.</p>
+    </section>
+    <section class="content-section"><h2>Why is the phone's name not enough?</h2><p>Several names in this library belong to more than one model record, each with its own XT code, year and guides. Treat every code as a separate record.</p><div class="xt-groups">${sharedNames.map((group) => `<div><span>${esc(group.name)}</span><ul>${group.records.map((model) => `<li><a href="/models/${model.slug}/">${esc(model.xtCode)}</a> <small>${model.year}</small></li>`).join('')}</ul></div>`).join('')}</div></section>
+    <section class="content-section"><h2>What should you do once you have the code?</h2><ol class="step-list"><li><span>1</span><p>Open the model hub for that exact code from the table above.</p></li><li><span>2</span><p>Choose the component guide that matches the failed function.</p></li><li><span>3</span><p>Check the current listing in the <a class="inline-link" href="/parts/">parts directory</a> for that code. A category is a sourcing destination, not proof of fitment or stock.</p></li><li><span>4</span><p>Write the full code on the repair ticket next to the live listing URL you used.</p></li></ol></section>
+    <section class="content-section"><h2>What if the phone does not turn on?</h2><p>The Settings paths need a working display. If you cannot read the code from the phone, do not guess from the name. Confirm the code from another record you trust before ordering a part.</p></section>
+    <section class="source-ledger"><h2>Sources for this page</h2><div class="source-stack">${sourcePill(xtSources.findModel, 'Find my model number', 'Motorola Support, opened November 9, 2026')}${sourcePill(xtSources.motoG2025Info, 'Find legal and product information', 'moto g 2025 help, opened November 9, 2026')}${sourcePill(sources.motorolaSupport, 'Motorola Support', 'Official product support entry point')}</div></section>
+  </article></main>${footer()}`;
 }
 
 function sourcesPage() {
@@ -317,6 +358,7 @@ function llmsText() {
     '## Start here',
     `- [Repair guide library](${routeUrl('guides')}): search all ${allGuides.length} guides by model, XT code, or component`,
     `- [Motorola models by XT code](${routeUrl('models')}): ${models.length} model hubs`,
+    `- [Find your Motorola model number (XT code)](${routeUrl('xt-code')}): where Motorola shows the model number in Settings, plus an XT code lookup`,
     `- [Repair topics](${routeUrl('topics')}): ${topics.length} component hubs`,
     `- [California Right to Repair Act (SB 244)](${routeUrl('right-to-repair')}): primary-source explainer`,
     `- [Parts directory](${routeUrl('parts')}): current Parts4Cells model categories`,
@@ -356,6 +398,7 @@ await writeRoute('topics', topicsIndexPage());
 await writeRoute('right-to-repair', rightToRepairPage());
 await writeRoute('parts', partsPage());
 await writeRoute('sources', sourcesPage());
+await writeRoute('xt-code', xtCodePage());
 await writeRoute('privacy', simplePage({
   title: 'Privacy', eyebrow: 'Updated November 5, 2026', route: 'privacy',
   description: 'No account or form is needed to use this site. Microsoft Clarity analytics measures how pages are used so the guides can be improved.',
@@ -367,7 +410,7 @@ for (const model of models) await writeRoute(`models/${model.slug}`, modelPage(m
 for (const topic of topics) await writeRoute(`topics/${topic.slug}`, topicPage(topic));
 
 const sitemapRoutes = [
-  '', 'guides', 'models', 'topics', 'right-to-repair', 'parts', 'sources', 'privacy',
+  '', 'guides', 'models', 'topics', 'right-to-repair', 'parts', 'sources', 'privacy', 'xt-code',
   ...allGuides.map((guide) => `guides/${guide.slug}`),
   ...models.map((model) => `models/${model.slug}`),
   ...topics.map((topic) => `topics/${topic.slug}`),
@@ -377,7 +420,13 @@ const sitemapRoutes = [
 // added to guide, model and topic pages (other routes unchanged).
 const contentUpdatedOn = '2026-11-07';
 const breadcrumbsAddedOn = '2026-11-08';
-const lastmodFor = (route) => (/^(guides|models|topics)\/./.test(route) ? breadcrumbsAddedOn : contentUpdatedOn);
+// 2026-11-09: new /xt-code/ page; links to it added on the homepage, guide index, models index, parts directory and
+// every guide. Model hubs, topic hubs and the other routes are unchanged.
+const xtLinksAddedOn = '2026-11-09';
+const lastmodFor = (route) => {
+  if (['xt-code', '', 'guides', 'models', 'parts'].includes(route) || /^guides\/./.test(route)) return xtLinksAddedOn;
+  return /^(models|topics)\/./.test(route) ? breadcrumbsAddedOn : contentUpdatedOn;
+};
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapRoutes.map((route) => `  <url><loc>${routeUrl(route)}</loc><lastmod>${lastmodFor(route)}</lastmod></url>`).join('\n')}\n</urlset>\n`;
 await writeFile(join(outputDir, 'sitemap.xml'), sitemap, 'utf8');
 await writeFile(join(outputDir, 'robots.txt'), `User-agent: *\nAllow: /\n\nSitemap: ${site.origin}/sitemap.xml\n`, 'utf8');
