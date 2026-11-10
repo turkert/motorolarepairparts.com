@@ -207,6 +207,12 @@ for (const route of ['', 'guides', 'models', 'parts']) {
 for (const file of guideFiles) check((await readFile(file, 'utf8')).includes('href="/xt-code/"'), `${relative(outputDir, file)}: missing link to /xt-code/`);
 check(!/[\u2013\u2014]/.test(xtPage), 'xt-code: contains an en or em dash');
 
+// Index and reference pages (2026-11-10): visible Home > page trail with a matching BreadcrumbList; the homepage has none.
+for (const [route, name] of [['guides', 'Guides'], ['models', 'Models'], ['topics', 'Topics'], ['parts', 'Parts'], ['sources', 'Sources'], ['right-to-repair', 'Right to Repair'], ['privacy', 'Privacy']]) {
+  checkBreadcrumbs(await readFile(join(outputDir, route, 'index.html'), 'utf8'), route, ['Home', name]);
+}
+check(!(await readFile(join(outputDir, 'index.html'), 'utf8')).includes('class="breadcrumbs"'), 'home: should not show a breadcrumb trail');
+
 check(guideHashes.size === G, `Only ${guideHashes.size} guide article bodies are unique`);
 
 const home = await readFile(join(outputDir, 'index.html'), 'utf8');
