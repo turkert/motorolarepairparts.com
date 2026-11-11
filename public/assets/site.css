@@ -353,3 +353,14 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
   .xt-table .xt-opt { display: none; }
   .xt-table td { white-space: normal; }
 }
+
+/* SB 244 page (2026-11-11): key facts table and three-up penalty cards */
+.facts-table th, .facts-table td { white-space: normal; vertical-align: top; line-height: 1.5; }
+.facts-table tbody th { width: 34%; font-variant-numeric: normal; }
+.law-facts.three { grid-template-columns: repeat(3, 1fr); }
+.law-facts.three strong { font-size: 24px; }
+@media (max-width: 720px) {
+  .law-facts.three { grid-template-columns: 1fr; }
+  .facts-table th, .facts-table td { padding: 12px 14px; }
+  .facts-table tbody th { width: 40%; }
+}
