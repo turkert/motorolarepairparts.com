@@ -213,6 +213,16 @@ for (const [route, name] of [['guides', 'Guides'], ['models', 'Models'], ['topic
 }
 check(!(await readFile(join(outputDir, 'index.html'), 'utf8')).includes('class="breadcrumbs"'), 'home: should not show a breadcrumb trail');
 
+// SB 244 page (2026-11-11): sources rechecked, key facts table, enforcement section, dated primary sources, lastmod.
+const lawPage = await readFile(join(outputDir, 'right-to-repair', 'index.html'), 'utf8');
+check(lawPage.includes('Sources rechecked 2026-11-11') && lawPage.includes('"dateModified":"2026-11-11"'), 'right-to-repair: recheck date missing from eyebrow or Article JSON-LD');
+check(lawPage.includes('Chapter 704') && lawPage.includes('October 10, 2023'), 'right-to-repair: chapter or approval date missing');
+check(lawPage.includes('class="xt-table facts-table"') && (lawPage.match(/<th scope="row">/g) || []).length === 6, 'right-to-repair: key facts table missing or incomplete');
+check(lawPage.includes('How is the act enforced?') && ['$1,000 per day', '$2,000 per day', '$5,000 per day'].every((amount) => lawPage.includes(amount)), 'right-to-repair: enforcement section incomplete');
+check(lawPage.includes('equivalent or better, readily available replacement product at no charge'), 'right-to-repair: replacement-product exception missing');
+check(!/Updated 2026-09-12/.test(lawPage), 'right-to-repair: stale Updated 2026-09-12 eyebrow');
+for (const source of [sources.sb244, sources.californiaConsumer, sources.californiaIndustry]) check(lawPage.includes(`href="${source}"`), `right-to-repair: missing source ${source}`);
+
 check(guideHashes.size === G, `Only ${guideHashes.size} guide article bodies are unique`);
 
 const home = await readFile(join(outputDir, 'index.html'), 'utf8');
