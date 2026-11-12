@@ -274,6 +274,7 @@ check(builtDimensions?.width === 1200 && builtDimensions?.height === 630, `dist-
 const publicHash = createHash('sha256').update(publicOg).digest('hex').toUpperCase();
 const builtHash = createHash('sha256').update(builtOg).digest('hex').toUpperCase();
 check(publicHash === builtHash, 'Built social card differs from public source asset');
+check(publicOg.length <= 200000, `public/og.png is ${publicOg.length} bytes, budget is 200000`);
 
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
 check(manifest.publicDeployment === true, 'Build manifest does not record the authorized public deployment');
