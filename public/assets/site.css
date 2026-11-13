@@ -364,3 +364,16 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
   .facts-table th, .facts-table td { padding: 12px 14px; }
   .facts-table tbody th { width: 40%; }
 }
+
+/* Motorola-published facts on model hubs and guides (2026-11-13) */
+.spec-heading { margin: 30px 0 0; font-size: 19px; letter-spacing: -.02em; }
+.spec-block > p:first-child { margin: 10px 0 0; color: #4f525a; font-size: 16px; line-height: 1.7; }
+.spec-block .xt-table-wrap { margin-top: 16px; }
+.spec-table tbody tr.is-relevant { background: rgba(23,105,255,.05); }
+.spec-table tbody tr.is-relevant th { box-shadow: inset 3px 0 0 var(--blue); }
+.spec-flag { display: inline-block; margin-left: 10px; padding: 2px 9px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 10px; font-weight: 780; letter-spacing: .08em; text-transform: uppercase; vertical-align: 1px; }
+.catalog-note { max-width: 680px; margin: 14px 0 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: #4f525a; font-size: 14px; line-height: 1.6; }
+.spec-section { max-width: 880px; margin: 0 0 40px; }
+@media (max-width: 560px) {
+  .spec-flag { display: table; margin: 6px 0 0; }
+}
