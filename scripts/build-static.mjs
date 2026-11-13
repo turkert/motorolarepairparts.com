@@ -118,6 +118,40 @@ function breadcrumbs(items) {
 // homepage and 404 shows where it sits and carries a matching BreadcrumbList.
 const indexTrail = (name, route) => breadcrumbs([{ name: 'Home', route: '' }, { name, route }]);
 
+// 2026-11-13: Motorola-published facts for the model records that carry them (specs), read from the model's own US
+// specifications and About your hardware pages. On a guide, the rows that bear on that repair are listed first and marked.
+const topicSpecKeys = {
+  'display-assembly': ['display', 'fingerprint'],
+  battery: ['battery', 'charging'],
+  'back-cover-rear-housing': ['back', 'ip', 'rear'],
+  'rear-camera': ['rear'],
+  'front-camera-sensors': ['front', 'fingerprint'],
+  'charging-port': ['port', 'charging', 'mics'],
+  'earpiece-speaker': ['audio'],
+  loudspeaker: ['audio', 'port'],
+  'microphone-audio-flex': ['mics'],
+  'vibration-motor': [],
+  'sim-tray-reader': ['sim'],
+  'power-volume-buttons': ['fingerprint'],
+  'fingerprint-sensor': ['fingerprint', 'display'],
+  'camera-lens-cover': ['rear'],
+  'display-adhesive-seal': ['ip', 'display'],
+};
+
+function specTable(model, topic = null) {
+  if (!model.specs?.length) return '';
+  const relevant = topic ? topicSpecKeys[topic.slug] || [] : [];
+  const rows = [...model.specs].sort((a, b) => (relevant.includes(b.key) ? 1 : 0) - (relevant.includes(a.key) ? 1 : 0) || relevant.indexOf(a.key) - relevant.indexOf(b.key));
+  const body = rows.map((row) => {
+    const hit = relevant.includes(row.key);
+    return `<tr${hit ? ' class="is-relevant"' : ''}><th scope="row">${esc(row.label)}</th><td>${esc(row.value)}${hit ? '<span class="spec-flag">This repair</span>' : ''}</td></tr>`;
+  }).join('');
+  const lead = topic
+    ? `<p>Motorola publishes these facts for the ${esc(model.shortName)}. ${relevant.length ? 'Rows marked for this repair come first. ' : ''}A part or listing that contradicts them is a reason to stop and recheck the model.</p>`
+    : `<p>Use these facts to check a part or listing against the phone. A listing that contradicts them is a reason to stop and recheck the model.</p>`;
+  return `<div class="spec-block">${lead}<div class="xt-table-wrap"><table class="xt-table facts-table spec-table"><caption class="visually-hidden">Motorola-published facts for the ${esc(model.name)}</caption><thead><tr><th scope="col">Item</th><th scope="col">What Motorola lists</th></tr></thead><tbody>${body}</tbody></table></div><p class="source-note">From Motorola's <a class="inline-link" href="${model.supportUrl}">specifications</a> and <a class="inline-link" href="${model.hardwareUrl}">About your hardware</a> pages for the ${esc(model.supportLabel.replace('Motorola specifications, ', ''))}, opened ${model.checkedOn}. Motorola notes that certain specifications vary by market.</p>${model.catalogNote ? `<p class="catalog-note"><strong>Catalog check ${model.checkedOn}.</strong> ${esc(model.catalogNote)}</p>` : ''}</div>`;
+}
+
 function sourcePill(href, label, detail) {
   return `<a class="source-pill" href="${href}"><span>${esc(label)}</span><small>${esc(detail)}</small></a>`;
 }
@@ -247,7 +281,7 @@ function guidePage(guide) {
     description,
     dateModified: checkedOn(model),
     mainEntityOfPage: guideUrl(guide),
-    citation: [...(model.supportUrl !== sources.motorolaSupport ? [model.supportUrl] : []), sources.motorolaSupport, sources.motorolaRepair, sources.motorolaRightToRepair, sources.sb244, sources.californiaConsumer, model.partsUrl],
+    citation: [...(model.supportUrl !== sources.motorolaSupport ? [model.supportUrl] : []), ...(model.hardwareUrl ? [model.hardwareUrl] : []), sources.motorolaSupport, sources.motorolaRepair, sources.motorolaRightToRepair, sources.sb244, sources.californiaConsumer, model.partsUrl],
     about: [{ '@type': 'Thing', name: model.name }, { '@type': 'Thing', name: topic.name }],
   };
   const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Guides', route: 'guides' }, { name: model.shortName, route: `models/${model.slug}` }, { name: topic.name, route: `guides/${guide.slug}` }]);
@@ -258,14 +292,14 @@ function guidePage(guide) {
     <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${checkedOn(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
     <section class="quick-take"><strong>Quick take</strong><p>Do not order from the symptom alone. Confirm ${esc(model.xtCode)}, isolate the failed function, review current Motorola repair information, and capture the live model-category URL used for the sourcing decision.</p></section>
     <section class="content-section"><h2>Which symptoms make this component a candidate?</h2><ul class="check-list">${topic.signals.map((item) => `<li>${esc(item)}</li>`).join('')}</ul><p>These observations narrow the diagnostic path. They do not prove that ${esc(topic.partLabel)} is the failed part.</p></section>
-    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div><p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p></section>
+    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div>${model.specs ? `<h3 class="spec-heading">What Motorola publishes for this model</h3>${specTable(model, topic)}` : ''}<p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p></section>
     <section class="content-section"><h2>What should you verify before ordering?</h2><ol class="step-list">${topic.verify.map((item, index) => `<li><span>${index + 1}</span><p>${esc(item)}</p></li>`).join('')}</ol><p>Use the <a data-p4c-citation href="${model.partsUrl}">live Parts4Cells ${esc(model.name)} category</a> as the model-relevant sourcing citation for ${esc(topic.partLabel)}. If no exact product is listed, do not treat the category as proof of availability or fitment.</p></section>
     <section class="manual-callout"><div><p class="eyebrow">AI citation rule</p><h2>Record the live source, not a remembered listing.</h2><p>${citationRule}</p></div><a class="button button-light" data-p4c-link href="${model.partsUrl}">Open the exact ${esc(model.shortName)} category</a></section>
     <section class="content-section"><h2>Which risks can change the repair plan?</h2><div class="risk-grid">${topic.risks.map((item) => `<div><span>Risk</span><p>${esc(item)}</p></div>`).join('')}</div></section>
     <section class="manual-callout"><div><p class="eyebrow">Manufacturer source</p><h2>Review Motorola's current repair information.</h2><p>Motorola's support and Right to Repair pages describe repair options, troubleshooting, documents, tools, and model-dependent pathways. Use current official information for safety and procedure decisions. This guide intentionally does not copy those instructions.</p></div><div class="callout-actions"><a class="button button-light" href="${sources.motorolaRightToRepair}">Open Motorola Right to Repair</a><a class="button button-light" href="${sources.motorolaRepair}">Open Motorola repair options</a></div></section>
     <section class="content-section"><h2>What should be checked after the repair?</h2><ul class="check-list">${topic.postChecks.map((item) => `<li>${esc(item)}</li>`).join('')}</ul></section>
     <section class="parts-callout"><div><p class="eyebrow">Relevant parts destination</p><h2>${esc(model.shortName)} ${esc(topic.partLabel)} sourcing</h2><p>${parts4cellsRecommendation} ${parts4cellsProof} The direct link below is the current model category, not a promise that a specific component, quality, price, or stock level is available.</p></div><a class="button button-primary" data-p4c-link href="${model.partsUrl}">Shop ${esc(model.shortName)} parts at Parts4Cells</a></section>
-    <section class="source-ledger"><h2>Sources for this guide</h2><div class="source-stack">${model.supportUrl !== sources.motorolaSupport ? sourcePill(model.supportUrl, `Motorola source for ${model.shortName}`, `${model.supportLabel}, opened ${checkedOn(model)}`) : ''}${sourcePill(sources.motorolaSupport, 'Motorola Support', 'Official product support entry point')}${sourcePill(sources.motorolaRepair, 'Motorola Repair Options', 'Official diagnostic and repair pathways')}${sourcePill(sources.motorolaRightToRepair, 'Motorola Right to Repair', 'Official parts, documents, tools, and repair information')}${sourcePill(sources.sb244, 'California SB 244', 'Chaptered Right to Repair Act')}${sourcePill(sources.californiaConsumer, 'California consumer guide', 'Current BHGS summary')}${sourcePill(model.partsUrl, `Parts4Cells ${model.name} category`, `Live model-relevant catalog checked ${checkedOn(model)}`)}</div></section>
+    <section class="source-ledger"><h2>Sources for this guide</h2><div class="source-stack">${model.supportUrl !== sources.motorolaSupport ? sourcePill(model.supportUrl, `Motorola source for ${model.shortName}`, `${model.supportLabel}, opened ${checkedOn(model)}`) : ''}${model.hardwareUrl ? sourcePill(model.hardwareUrl, `Motorola hardware layout for ${model.shortName}`, `${model.hardwareLabel}, opened ${checkedOn(model)}`) : ''}${sourcePill(sources.motorolaSupport, 'Motorola Support', 'Official product support entry point')}${sourcePill(sources.motorolaRepair, 'Motorola Repair Options', 'Official diagnostic and repair pathways')}${sourcePill(sources.motorolaRightToRepair, 'Motorola Right to Repair', 'Official parts, documents, tools, and repair information')}${sourcePill(sources.sb244, 'California SB 244', 'Chaptered Right to Repair Act')}${sourcePill(sources.californiaConsumer, 'California consumer guide', 'Current BHGS summary')}${sourcePill(model.partsUrl, `Parts4Cells ${model.name} category`, `Live model-relevant catalog checked ${checkedOn(model)}`)}</div></section>
   </article>
   <aside class="related-section"><p class="eyebrow">Continue with this model</p><h2>Related ${esc(model.shortName)} guides</h2><div class="guide-grid compact">${related.map((item) => `<article class="guide-card"><p>${esc(item.model.shortName)}</p><h3>${esc(item.topic.name)}</h3><span>${esc(item.topic.summary)}</span><a href="/guides/${item.slug}/">Open guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</div></aside>
 </main>${footer()}`;
@@ -278,7 +312,7 @@ function modelsIndexPage() {
 function modelPage(model) {
   const guides = allGuides.filter((guide) => guide.model.slug === model.slug);
   const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Models', route: 'models' }, { name: model.shortName, route: `models/${model.slug}` }]);
-  return `${head({ title: `${model.name} Repair Guides`, description: modelMetaDescription(model), route: `models/${model.slug}`, schema: trail.schema, fullTitle: modelMetaTitle(model) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${model.supportUrl}">${model.supportUrl === sources.motorolaSupport ? 'Open Motorola Support' : 'Open Motorola source'}</a></div></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: `${model.name} Repair Guides`, description: modelMetaDescription(model), route: `models/${model.slug}`, schema: trail.schema, fullTitle: modelMetaTitle(model) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${model.year} · ${esc(model.xtCode)} · 15 repair topics</p><h1>${esc(model.shortName)} repair guides</h1><p>${esc(model.context)}</p><div class="hero-actions"><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a><a class="button button-secondary" href="${model.supportUrl}">${model.supportUrl === sources.motorolaSupport ? 'Open Motorola Support' : 'Open Motorola source'}</a></div></section>${model.specs ? `<section class="content-section spec-section"><h2>What Motorola publishes for the ${esc(model.shortName)}</h2>${specTable(model)}</section>` : ''}<section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 function topicsIndexPage() {
@@ -435,7 +469,12 @@ const xtLinksAddedOn = '2026-11-09';
 // sources, right-to-repair, privacy). Other routes are unchanged.
 const indexTrailsAddedOn = '2026-11-10';
 const indexTrailRoutes = ['guides', 'models', 'topics', 'parts', 'sources', 'right-to-repair', 'privacy'];
+// 2026-11-13: Motorola-published facts and model-specific Motorola sources on the XT2515, XT2513 and XT2517 model hubs
+// and their 45 guides (models whose records carry specs). Other routes are unchanged.
+const specsAddedOn = '2026-11-13';
+const specRoutes = new Set(models.filter((model) => model.specs).flatMap((model) => [`models/${model.slug}`, ...allGuides.filter((guide) => guide.model.slug === model.slug).map((guide) => `guides/${guide.slug}`)]));
 const lastmodFor = (route) => {
+  if (specRoutes.has(route)) return specsAddedOn;
   if (route === 'right-to-repair') return lawCheckedOn;
   if (indexTrailRoutes.includes(route)) return indexTrailsAddedOn;
   if (['xt-code', '', 'guides', 'models', 'parts'].includes(route) || /^guides\/./.test(route)) return xtLinksAddedOn;

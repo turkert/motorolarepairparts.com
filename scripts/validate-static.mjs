@@ -276,6 +276,32 @@ const builtHash = createHash('sha256').update(builtOg).digest('hex').toUpperCase
 check(publicHash === builtHash, 'Built social card differs from public source asset');
 check(publicOg.length <= 200000, `public/og.png is ${publicOg.length} bytes, budget is 200000`);
 
+// Motorola-published facts (2026-11-13): models with specs need a dated official specifications and hardware source,
+// and every guide and hub for them must show the full table, the dated source note and, on guides, the marked rows.
+const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery: ['battery', 'charging'], 'back-cover-rear-housing': ['back', 'ip', 'rear'], 'rear-camera': ['rear'], 'front-camera-sensors': ['front', 'fingerprint'], 'charging-port': ['port', 'charging', 'mics'], 'earpiece-speaker': ['audio'], loudspeaker: ['audio', 'port'], 'microphone-audio-flex': ['mics'], 'vibration-motor': [], 'sim-tray-reader': ['sim'], 'power-volume-buttons': ['fingerprint'], 'fingerprint-sensor': ['fingerprint', 'display'], 'camera-lens-cover': ['rear'], 'display-adhesive-seal': ['ip', 'display'] };
+const specModels = models.filter((model) => model.specs);
+check(specModels.length === 3, `Expected 3 model records with Motorola-published facts, found ${specModels.length}`);
+const escText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+for (const model of specModels) {
+  check(model.supportUrl !== sources.motorolaSupport && new URL(model.supportUrl).hostname === 'en-us.support.motorola.com' && new URL(model.hardwareUrl || 'https://x.invalid').hostname === 'en-us.support.motorola.com', `${model.slug}: specs need Motorola US specifications and hardware pages`);
+  check(/^\d{4}-\d{2}-\d{2}$/.test(model.checkedOn || '') && model.hardwareLabel, `${model.slug}: specs need a check date and hardware label`);
+  check(new Set(model.specs.map((row) => row.key)).size === model.specs.length && model.specs.every((row) => row.label && row.value && !/[–—]/.test(row.value)), `${model.slug}: spec rows need unique keys, labels and values without dashes`);
+  const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
+  check(model.specs.every((row) => hub.includes(`<th scope="row">${escText(row.label)}</th><td>${escText(row.value)}</td>`)), `${model.slug}: hub is missing a Motorola-published fact`);
+  check(hub.includes(model.hardwareUrl) && hub.includes(`opened ${model.checkedOn}`) && !hub.includes('spec-flag'), `${model.slug}: hub spec table lacks its dated sources or marks rows`);
+  check(sitemap.includes(`<loc>${site.origin}/models/${model.slug}/</loc><lastmod>${model.checkedOn}</lastmod>`), `${model.slug}: hub lastmod is not ${model.checkedOn}`);
+  for (const guide of allGuides.filter((item) => item.model.slug === model.slug)) {
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    const rows = captures(html, /<tr(?: class="is-relevant")?><th scope="row">/g);
+    const marked = (html.match(/<tr class="is-relevant">/g) || []).length;
+    const expected = (specTopicKeys[guide.topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key));
+    check(rows.length === model.specs.length, `${guide.slug}: spec table has ${rows.length} rows, expected ${model.specs.length}`);
+    check(marked === expected.length, `${guide.slug}: ${marked} rows marked for this repair, expected ${expected.length}`);
+    check(html.includes(model.hardwareUrl) && html.includes(`Source review ${model.checkedOn}`) && html.includes(`"dateModified":"${model.checkedOn}"`), `${guide.slug}: missing hardware source or ${model.checkedOn} review date`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${model.checkedOn}</lastmod>`), `${guide.slug}: lastmod is not ${model.checkedOn}`);
+  }
+}
+
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
 check(manifest.publicDeployment === true, 'Build manifest does not record the authorized public deployment');
 check(manifest.htmlPages === H && manifest.sitemapUrls === H - 1, 'Build manifest counts are incorrect');
