@@ -289,7 +289,8 @@ for (const model of specModels) {
   const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
   check(model.specs.every((row) => hub.includes(`<th scope="row">${escText(row.label)}</th><td>${escText(row.value)}</td>`)), `${model.slug}: hub is missing a Motorola-published fact`);
   check(hub.includes(model.hardwareUrl) && hub.includes(`opened ${model.checkedOn}`) && !hub.includes('spec-flag'), `${model.slug}: hub spec table lacks its dated sources or marks rows`);
-  check(sitemap.includes(`<loc>${site.origin}/models/${model.slug}/</loc><lastmod>${model.checkedOn}</lastmod>`), `${model.slug}: hub lastmod is not ${model.checkedOn}`);
+  const hubDate = model.partPhotos?.length ? model.photosCheckedOn : model.checkedOn;
+  check(sitemap.includes(`<loc>${site.origin}/models/${model.slug}/</loc><lastmod>${hubDate}</lastmod>`), `${model.slug}: hub lastmod is not ${hubDate}`);
   for (const guide of allGuides.filter((item) => item.model.slug === model.slug)) {
     const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
     const rows = captures(html, /<tr(?: class="is-relevant")?><th scope="row">/g);
@@ -297,9 +298,59 @@ for (const model of specModels) {
     const expected = (specTopicKeys[guide.topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key));
     check(rows.length === model.specs.length, `${guide.slug}: spec table has ${rows.length} rows, expected ${model.specs.length}`);
     check(marked === expected.length, `${guide.slug}: ${marked} rows marked for this repair, expected ${expected.length}`);
-    check(html.includes(model.hardwareUrl) && html.includes(`Source review ${model.checkedOn}`) && html.includes(`"dateModified":"${model.checkedOn}"`), `${guide.slug}: missing hardware source or ${model.checkedOn} review date`);
-    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${model.checkedOn}</lastmod>`), `${guide.slug}: lastmod is not ${model.checkedOn}`);
+    const modified = model.partPhotos?.some((photo) => photo.topic === guide.topic.slug) ? model.photosCheckedOn : model.checkedOn;
+    check(html.includes(model.hardwareUrl) && html.includes(`Source review ${model.checkedOn}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing hardware source, ${model.checkedOn} review date or ${modified} dateModified`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${modified}</lastmod>`), `${guide.slug}: lastmod is not ${modified}`);
   }
+}
+
+
+// 2026-11-14: listing photos. Each photo file exists in public/ and the build, is WebP 800 x 600 and at most 60 KB;
+// the guide for its topic shows it once with width, height, alt, lazy loading and a dated caption, and its Article JSON-LD
+// names it as image; the hub shows every photo linked to its guide; no other page references /assets/parts/; no hotlinks.
+const webpSize = (buffer) => {
+  const tag = buffer.toString('ascii', 12, 16);
+  if (buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WEBP') return null;
+  if (tag === 'VP8 ') return { width: buffer.readUInt16LE(26) & 0x3fff, height: buffer.readUInt16LE(28) & 0x3fff };
+  if (tag === 'VP8L') { const b = buffer.readUInt32LE(21); return { width: (b & 0x3fff) + 1, height: ((b >> 14) & 0x3fff) + 1 }; }
+  if (tag === 'VP8X') return { width: 1 + buffer.readUIntLE(24, 3), height: 1 + buffer.readUIntLE(27, 3) };
+  return null;
+};
+const photoModels = models.filter((model) => model.partPhotos?.length);
+const expectedPhotoSrcs = new Set();
+for (const model of photoModels) {
+  check(/^\d{4}-\d{2}-\d{2}$/.test(model.photosCheckedOn || ''), `${model.slug}: partPhotos need photosCheckedOn`);
+  check(new Set(model.partPhotos.map((photo) => photo.topic)).size === model.partPhotos.length, `${model.slug}: one photo per topic`);
+  const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
+  for (const photo of model.partPhotos) {
+    const src = `/assets/parts/${model.slug}-${photo.topic}.webp`;
+    expectedPhotoSrcs.add(src);
+    const guide = allGuides.find((item) => item.model.slug === model.slug && item.topic.slug === photo.topic);
+    check(Boolean(guide), `${model.slug}: photo topic ${photo.topic} has no guide`);
+    check(photo.title && photo.item && photo.alt && photo.alt.length >= 20 && ![photo.title, photo.alt].some((text) => /[\u2013\u2014]/.test(text)), `${model.slug}/${photo.topic}: photo needs title, item and alt without dashes`);
+    for (const base of [join(projectRoot, 'public'), outputDir]) {
+      const file = join(base, ...src.split('/').filter(Boolean));
+      if (!(await exists(file))) { failures.push(`${src}: missing under ${relative(projectRoot, base)}`); continue; }
+      const buffer = await readFile(file);
+      const size = webpSize(buffer);
+      check(size?.width === 800 && size?.height === 600, `${src}: expected an 800 x 600 WebP`);
+      check(buffer.length <= 60 * 1024, `${src}: ${buffer.length} bytes, budget is 60 KB`);
+    }
+    if (!guide) continue;
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    const tag = `<img src="${src}" width="800" height="600" alt="${escText(photo.alt)}" loading="lazy" decoding="async">`;
+    check((html.match(new RegExp(src.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === 2 && html.includes(tag), `${guide.slug}: photo should appear once (plus JSON-LD image) with size, alt and lazy loading`);
+    check(html.includes(`(item ${escText(photo.item)}), in the Parts4Cells ${escText(model.name)} category, checked ${model.photosCheckedOn}.`), `${guide.slug}: photo caption lacks item, category or date`);
+    check(html.includes(`"image":"${site.origin}${src}"`), `${guide.slug}: Article JSON-LD does not name the photo`);
+    check(hub.includes(`<a class="photo-card" href="/guides/${guide.slug}/"><figure class="part-photo"><img src="${src}"`), `${model.slug}: hub photo card for ${photo.topic} missing or not linked to its guide`);
+  }
+}
+for (const file of htmlFiles) {
+  const html = await readFile(file, 'utf8');
+  for (const src of captures(html, /<img src="([^"]+)"/g)) check(expectedPhotoSrcs.has(src), `${relative(outputDir, file)}: unexpected image ${src}`);
+  check(!/<img[^>]+src="https?:/.test(html), `${relative(outputDir, file)}: hotlinked image`);
+  const isPhotoRoute = photoModels.some((model) => file.includes(`${sep}models${sep}${model.slug}${sep}`) || model.partPhotos.some((photo) => file.includes(`${sep}guides${sep}${model.slug}-${photo.topic}-repair-guide${sep}`)));
+  if (!isPhotoRoute) check(!html.includes('/assets/parts/'), `${relative(outputDir, file)}: references a listing photo it should not`);
 }
 
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
@@ -320,6 +371,7 @@ if (failures.length) {
     sitemapUrls: sitemapUrls.length,
     uniqueGuideBodies: guideHashes.size,
     modelCategoryLinks: models.length,
+    listingPhotos: expectedPhotoSrcs.size,
     socialCard: { width: publicDimensions.width, height: publicDimensions.height, sha256: publicHash },
     githubPagesWorkflow: true,
     cnamePresent: true,
