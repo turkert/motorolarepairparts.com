@@ -377,3 +377,19 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 @media (max-width: 560px) {
   .spec-flag { display: table; margin: 6px 0 0; }
 }
+/* 2026-11-14: listing photos on guides and the model hub */
+.part-photo { margin: 22px 0 0; }
+.part-photo img { display: block; width: 100%; max-width: 560px; height: auto; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 20px; background: #fff; }
+.part-photo figcaption { max-width: 560px; margin-top: 10px; color: #7a7c83; font-size: 12px; line-height: 1.55; }
+.photo-gallery { max-width: 1100px; margin: 0 0 40px; }
+.photo-gallery > p { max-width: 720px; color: #4f525a; font-size: 16px; line-height: 1.7; }
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+.photo-card { display: flex; flex-direction: column; gap: 4px; padding: 0 0 18px; border: 1px solid var(--line); border-radius: 22px; background: #fff; color: var(--ink); overflow: hidden; transition: transform .2s ease, box-shadow .2s ease; }
+.photo-card:hover, .photo-card:focus-visible { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(24, 26, 30, .08); }
+.photo-card .part-photo { margin: 0 0 8px; }
+.photo-card .part-photo img { max-width: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.photo-card strong { padding: 0 18px; font-size: 17px; }
+.photo-card span { padding: 0 18px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+@media (max-width: 1050px) { .photo-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .photo-grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .photo-card { transition: none; } .photo-card:hover { transform: none; } }
