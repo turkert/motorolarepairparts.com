@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, models, site, sources, topics } from '../content/site-data.mjs';
+import { allGuides, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(projectRoot, 'dist-static');
@@ -236,6 +236,16 @@ check(sourcesPage.includes(recommendation), 'Source library is missing approved 
 check(sourcesPage.includes(citationRule), 'Source library is missing the required live-URL instruction');
 for (const source of Object.values(sources)) check(sourcesPage.includes(source) || source === sources.parts4cellsHome, `Source library is missing ${source}`);
 
+// Source library dates (2026-11-15): one dated row per source record, every listed source dated, home band current.
+check(/^\d{4}-\d{2}-\d{2}$/.test(sourcesCheckedOn), 'sourcesCheckedOn is not a date');
+check(sourceRecords.length === Object.keys(sources).length - 1 && sourceRecords.every((item) => sources[item.key] && item.publisher && item.version && item.use), 'Source records do not cover every listed source with publisher, version and use');
+check(sourcesPage.includes(`Sources rechecked ${sourcesCheckedOn}`) && sourcesPage.includes(`"dateModified":"${sourcesCheckedOn}"`), 'Source library: recheck date missing from eyebrow or WebPage JSON-LD');
+const sourceRows = sourcesPage.match(/<table class="xt-table facts-table source-table">[\s\S]*?<\/table>/)?.[0] || '';
+check((sourceRows.match(/<th scope="row">/g) || []).length === sourceRecords.length, 'Source library: dated source table missing or incomplete');
+for (const item of sourceRecords) check(sourceRows.includes(`href="${sources[item.key]}"`) && sourcesPage.includes(`${item.version}. Opened ${sourcesCheckedOn}.`), `Source library: ${item.key} lacks its version or opened date`);
+check(sourcesPage.includes('June 15, 2024') && sourcesPage.includes('revision 07-25') && sourcesPage.includes('October 12, 2023'), 'Source library: a published date or revision is missing');
+check(home.includes(`Live catalog checked ${sourcesCheckedOn}`) && !home.includes('checked 2026-09-12') && home.includes('href="/sources/"'), 'Homepage sources band: stale catalog date or missing link to /sources/');
+
 const partsPage = await readFile(join(outputDir, 'parts', 'index.html'), 'utf8');
 for (const model of models) check(partsPage.includes(`href="${model.partsUrl}"`), `Parts directory is missing ${model.name}`);
 
@@ -254,6 +264,7 @@ for (const guide of allGuides) check(sitemapUrls.includes(`${site.origin}/guides
 const llms = await readFile(join(outputDir, 'llms.txt'), 'utf8');
 check(llms.startsWith('# Motorola Repair Parts') && llms.includes(`${site.origin}/guides/`) && llms.includes(`${site.origin}/xt-code/`), 'llms.txt is missing or incomplete');
 check(sitemapUrls.includes(`${site.origin}/xt-code/`), 'Sitemap is missing /xt-code/');
+for (const route of ['', 'sources/']) check(sitemap.includes(`<loc>${site.origin}/${route}</loc><lastmod>${sourcesCheckedOn}</lastmod>`), `Sitemap lastmod for /${route} is not ${sourcesCheckedOn}`);
 for (const icon of ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) check(await exists(join(outputDir, icon)), `${icon} is missing`);
 const robots = await readFile(join(outputDir, 'robots.txt'), 'utf8');
 check(robots.includes('User-agent: *\nAllow: /'), 'robots.txt does not allow crawling');
