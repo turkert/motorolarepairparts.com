@@ -16,6 +16,19 @@ export const sources = {
   parts4cellsHome: 'https://parts4cells.com/',
 };
 
+// 2026-11-15: every entry in the source library was reopened in Chrome on sourcesCheckedOn. Version and date details are
+// as each source shows them (California Legislative Information "Date Published", BHGS revision code, advisory date).
+export const sourcesCheckedOn = '2026-11-15';
+export const sourceRecords = [
+  { key: 'sb244', group: 'law', label: 'California SB 244', publisher: 'California Legislative Information', version: 'Chaptered text, Chapter 704, Statutes of 2023; approved and filed October 10, 2023; published October 12, 2023', use: 'Controlling bill text and definitions' },
+  { key: 'californiaConsumer', group: 'law', label: 'Right to Repair Act consumer guide', publisher: 'California Bureau of Household Goods and Services (BHGS)', version: 'One-page guide, revision 07-25 (July 2025)', use: 'Plain-language coverage conditions, access periods and licensing note' },
+  { key: 'californiaIndustry', group: 'law', label: 'SB 244 industry advisory', publisher: 'California Bureau of Household Goods and Services (BHGS)', version: 'Three-page advisory dated June 15, 2024', use: 'Manufacturer requirements, covered and excluded products, limitations' },
+  { key: 'motorolaSupport', group: 'motorola', label: 'Motorola Support', publisher: 'Motorola (US support site)', version: 'Live page, undated', use: 'Product search, Software Fix, repair options, submitting and tracking a repair' },
+  { key: 'motorolaRepair', group: 'motorola', label: 'Motorola Repair Options', publisher: 'Motorola (US support site)', version: 'Live page, undated', use: 'Software, hardware and physical or liquid damage triage, cost, timing, and preparing a phone for mail-in repair' },
+  { key: 'motorolaRightToRepair', group: 'motorola', label: 'Motorola Right to Repair', publisher: 'Motorola (US support site)', version: 'Live page, undated', use: 'Genuine parts distributors, repair documents (parts lists, disassembly and assembly manuals, schematics), tools, repair kits and technician training' },
+  { key: 'parts4cellsMotorola', group: 'parts', label: 'Parts4Cells Motorola category', publisher: 'Parts4Cells', version: 'Live catalog page listing eight Motorola series categories', use: 'Sourcing destination; each model record links its own exact category' },
+];
+
 const supportUrl = sources.motorolaSupport;
 
 export const models = [
