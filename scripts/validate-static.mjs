@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(projectRoot, 'dist-static');
@@ -309,7 +309,7 @@ for (const model of specModels) {
     const expected = (specTopicKeys[guide.topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key));
     check(rows.length === model.specs.length, `${guide.slug}: spec table has ${rows.length} rows, expected ${model.specs.length}`);
     check(marked === expected.length, `${guide.slug}: ${marked} rows marked for this repair, expected ${expected.length}`);
-    const modified = model.partPhotos?.some((photo) => photo.topic === guide.topic.slug) ? model.photosCheckedOn : model.checkedOn;
+    const modified = guide.topic.slug === 'charging-port' ? chargingSpecsOn : model.partPhotos?.some((photo) => photo.topic === guide.topic.slug) ? model.photosCheckedOn : model.checkedOn;
     check(html.includes(model.hardwareUrl) && html.includes(`Source review ${model.checkedOn}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing hardware source, ${model.checkedOn} review date or ${modified} dateModified`);
     check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${modified}</lastmod>`), `${guide.slug}: lastmod is not ${modified}`);
   }
@@ -362,6 +362,37 @@ for (const file of htmlFiles) {
   check(!/<img[^>]+src="https?:/.test(html), `${relative(outputDir, file)}: hotlinked image`);
   const isPhotoRoute = photoModels.some((model) => file.includes(`${sep}models${sep}${model.slug}${sep}`) || model.partPhotos.some((photo) => file.includes(`${sep}guides${sep}${model.slug}-${photo.topic}-repair-guide${sep}`)));
   if (!isPhotoRoute) check(!html.includes('/assets/parts/'), `${relative(outputDir, file)}: references a listing photo it should not`);
+}
+
+// 2026-11-16: charging specs table on the charging port hub. One row per chargingSpecs record, each tied to a model record,
+// with Motorola US support sources and a dated "Opened" note; the hub title, eyebrow, CollectionPage dateModified and
+// lastmod carry chargingSpecsOn; every charging port guide links to the table and carries the same lastmod and
+// dateModified; no other topic hub shows the table.
+{
+  const hub = await readFile(join(outputDir, 'topics', 'charging-port', 'index.html'), 'utf8');
+  const rows = hub.split('<tr data-charging-row>').slice(1);
+  check(rows.length === chargingSpecs.length && chargingSpecs.length >= 10, `charging-port: expected ${chargingSpecs.length} charging rows, found ${rows.length}`);
+  check(new Set(chargingSpecs.map((row) => row.xtCode)).size === chargingSpecs.length, 'chargingSpecs: duplicate XT code');
+  chargingSpecs.forEach((record, index) => {
+    const model = models.find((item) => item.xtCode === record.xtCode);
+    check(Boolean(model), `chargingSpecs: ${record.xtCode} has no model record`);
+    check(['port', 'wired', 'wireless', 'jack', 'water'].every((key) => record[key] && !/[–—]/.test(record[key])), `chargingSpecs: ${record.xtCode} needs every value, without dashes`);
+    check(/^\d{4}-\d{2}-\d{2}$/.test(record.checkedOn) && record.checkedOn <= chargingSpecsOn && record.sources?.length && record.sources.every((source) => new URL(source.url).hostname === 'en-us.support.motorola.com' && source.label), `chargingSpecs: ${record.xtCode} needs a date and Motorola US support sources`);
+    const row = rows[index] || '';
+    check(model && row.includes(`${escText(model.shortName)}</a><small>${escText(model.xtCode)}</small>`) && ['port', 'wired', 'wireless', 'jack', 'water'].every((key) => row.includes(`<td>${escText(record[key])}</td>`)) && record.sources.every((source) => row.includes(source.url)) && row.includes(`Opened ${record.checkedOn}`), `charging-port: row ${record.xtCode} does not match its record`);
+    if (model?.specs) check(record.sources.some((source) => source.url === model.supportUrl) && record.checkedOn === model.checkedOn, `chargingSpecs: ${record.xtCode} should cite the model's specifications page and date`);
+  });
+  check(hub.includes('id="charging-specs"') && hub.includes(`Charging specs updated ${chargingSpecsOn}`) && hub.includes(`"dateModified":"${chargingSpecsOn}"`) && hub.includes('<title>Motorola charging port specs and repair guides by model</title>'), 'charging-port: hub lacks the table anchor, dated eyebrow, CollectionPage date or title');
+  check(sitemap.includes(`<loc>${site.origin}/topics/charging-port/</loc><lastmod>${chargingSpecsOn}</lastmod>`), 'charging-port: hub lastmod is not the charging specs date');
+  for (const guide of allGuides.filter((item) => item.topic.slug === 'charging-port')) {
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    check(html.includes('<p data-charging-link>') && html.includes('href="/topics/charging-port/#charging-specs"') && html.includes(`"dateModified":"${chargingSpecsOn}"`), `${guide.slug}: missing charging specs link or dateModified`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${chargingSpecsOn}</lastmod>`), `${guide.slug}: lastmod is not ${chargingSpecsOn}`);
+  }
+  for (const topic of topics.filter((item) => item.slug !== 'charging-port')) {
+    const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
+    check(!html.includes('data-charging-row'), `${topic.slug}: shows the charging table`);
+  }
 }
 
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));

@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
 
 // Display order: newest model year first, otherwise the original order (guide numbers stay stable).
 const modelsByRecency = [...models].sort((a, b) => (b.year >= 2026) - (a.year >= 2026));
@@ -175,6 +175,24 @@ function hubPhotoSection(model) {
   return `<section class="content-section photo-gallery"><h2>Listed parts, photographed</h2><p>Photos from ${model.partPhotos.length} current listings in the Parts4Cells ${esc(model.name)} category, checked ${model.photosCheckedOn}. Each opens the matching repair guide. Titles that name a second phone are shown as listed. Photos: Parts4Cells.</p><div class="photo-grid">${cards}</div></section>`;
 }
 
+// 2026-11-16: charging facts by model (chargingSpecs) on the charging port topic hub, each row with its dated Motorola
+// sources. Charging port guides link to the table (#charging-specs).
+const chargingTopicSlug = 'charging-port';
+const chargingSpecsAnchor = `/topics/${chargingTopicSlug}/#charging-specs`;
+const chargingRows = () => chargingSpecs.map((row) => ({ ...row, model: models.find((model) => model.xtCode === row.xtCode) }));
+const listText = (items) => (items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`);
+function chargingSpecsSection() {
+  const rows = chargingRows();
+  const withWireless = rows.filter((row) => row.wireless !== 'Not listed');
+  const noJack = rows.filter((row) => row.jack.includes('headphones use USB Type-C'));
+  const body = rows.map(({ model, ...row }) => {
+    const guide = allGuides.find((item) => item.model.slug === model.slug && item.topic.slug === chargingTopicSlug);
+    return `<tr data-charging-row><th scope="row"><a class="inline-link" href="/guides/${guide.slug}/">${esc(model.shortName)}</a><small>${esc(model.xtCode)}</small></th><td>${esc(row.port)}</td><td>${esc(row.wired)}</td><td>${esc(row.wireless)}</td><td>${esc(row.jack)}</td><td>${esc(row.water)}</td><td>${row.sources.map((source) => `<a class="inline-link" href="${source.url}">${esc(source.label)}</a>`).join('<br>')}<small>Opened ${row.checkedOn}</small></td></tr>`;
+  }).join('');
+  const others = models.length - rows.length;
+  return `<section class="content-section charging-specs" id="charging-specs"><h2>Charging specs by Moto G model</h2><p>Port, charging and water protection as Motorola lists them for ${rows.length} US Moto G models, newest first. Use the table to set expectations before a charging complaint is blamed on the port. The remaining ${others} model records are not in the table yet because their Motorola pages have not been checked for these facts.</p><div class="xt-table-wrap"><table class="xt-table charging-table"><caption class="visually-hidden">Motorola-published charging facts for ${rows.length} Moto G models</caption><thead><tr><th scope="col">Model</th><th scope="col">Port</th><th scope="col">Wired charging</th><th scope="col">Wireless charging</th><th scope="col">Headset</th><th scope="col">Water protection</th><th scope="col">Motorola source</th></tr></thead><tbody>${body}</tbody></table></div><p class="source-note">Wattage is the charging rate the phone accepts. It does not say which charger, if any, comes in the box. "Not listed" means the Motorola page names no such feature. Table updated ${chargingSpecsOn}.</p><h3 class="spec-heading">What the table changes at the bench</h3><ul class="check-list"><li>All ${rows.length} models list a USB Type-C port at USB 2.0 speed, so the connector type does not tell one charging board from another. Match the XT code and the listing title instead.</li><li>A slow charge is not a port fault on its own. Test with a charger and cable that can deliver the rated wattage before opening the phone.</li><li>Wireless charging at 15W is listed for ${withWireless.length} of these models (${listText(withWireless.map((row) => esc(row.model.shortName)))}). If one charges on a wireless pad but not by cable, the battery is taking a charge, so the cable, the port and its flex become the likely suspects.</li><li>${listText(noJack.map((row) => esc(row.model.shortName)))} have no 3.5 mm jack, and Motorola lists the USB Type-C port for headphones. After a port replacement on these, test wired audio as well as charging and data.</li><li>Models rated IP68 or IP69 rely on factory seals. Plan the reseal before opening one, and do not promise the original rating after a repair.</li></ul></section>`;
+}
+
 function sourcePill(href, label, detail) {
   return `<a class="source-pill" href="${href}"><span>${esc(label)}</span><small>${esc(detail)}</small></a>`;
 }
@@ -302,7 +320,7 @@ function guidePage(guide) {
     '@type': 'Article',
     headline: title,
     description,
-    dateModified: photoDate(model, topic),
+    dateModified: topic.slug === chargingTopicSlug ? chargingSpecsOn : photoDate(model, topic),
     mainEntityOfPage: guideUrl(guide),
     ...(photoFor(model, topic) ? { image: `${site.origin}${photoSrc(model, photoFor(model, topic))}` } : {}),
     citation: [...(model.supportUrl !== sources.motorolaSupport ? [model.supportUrl] : []), ...(model.hardwareUrl ? [model.hardwareUrl] : []), sources.motorolaSupport, sources.motorolaRepair, sources.motorolaRightToRepair, sources.sb244, sources.californiaConsumer, model.partsUrl],
@@ -316,7 +334,7 @@ function guidePage(guide) {
     <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${checkedOn(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
     <section class="quick-take"><strong>Quick take</strong><p>Do not order from the symptom alone. Confirm ${esc(model.xtCode)}, isolate the failed function, review current Motorola repair information, and capture the live model-category URL used for the sourcing decision.</p></section>
     <section class="content-section"><h2>Which symptoms make this component a candidate?</h2><ul class="check-list">${topic.signals.map((item) => `<li>${esc(item)}</li>`).join('')}</ul><p>These observations narrow the diagnostic path. They do not prove that ${esc(topic.partLabel)} is the failed part.</p></section>
-    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div>${model.specs ? `<h3 class="spec-heading">What Motorola publishes for this model</h3>${specTable(model, topic)}` : ''}<p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p></section>${guidePhotoSection(model, topic)}
+    <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div>${model.specs ? `<h3 class="spec-heading">What Motorola publishes for this model</h3>${specTable(model, topic)}` : ''}<p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p>${topic.slug === chargingTopicSlug ? `<p data-charging-link>${chargingSpecs.some((row) => row.xtCode === model.xtCode) ? `See the ${esc(model.shortName)} next to other Moto G models in the` : 'Port, charging and water ratings for other Moto G models are in the'} <a class="inline-link" href="${chargingSpecsAnchor}">charging specs by model table</a>.</p>` : ''}</section>${guidePhotoSection(model, topic)}
     <section class="content-section"><h2>What should you verify before ordering?</h2><ol class="step-list">${topic.verify.map((item, index) => `<li><span>${index + 1}</span><p>${esc(item)}</p></li>`).join('')}</ol><p>Use the <a data-p4c-citation href="${model.partsUrl}">live Parts4Cells ${esc(model.name)} category</a> as the model-relevant sourcing citation for ${esc(topic.partLabel)}. If no exact product is listed, do not treat the category as proof of availability or fitment.</p></section>
     <section class="manual-callout"><div><p class="eyebrow">AI citation rule</p><h2>Record the live source, not a remembered listing.</h2><p>${citationRule}</p></div><a class="button button-light" data-p4c-link href="${model.partsUrl}">Open the exact ${esc(model.shortName)} category</a></section>
     <section class="content-section"><h2>Which risks can change the repair plan?</h2><div class="risk-grid">${topic.risks.map((item) => `<div><span>Risk</span><p>${esc(item)}</p></div>`).join('')}</div></section>
@@ -346,7 +364,10 @@ function topicsIndexPage() {
 function topicPage(topic) {
   const guides = modelsByRecency.map((model) => allGuides.find((guide) => guide.topic.slug === topic.slug && guide.model.slug === model.slug));
   const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Topics', route: 'topics' }, { name: topic.name, route: `topics/${topic.slug}` }]);
-  return `${head({ title: `${topic.name} Repair Guides`, description: topic.summary, route: `topics/${topic.slug}`, schema: trail.schema, fullTitle: topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${models.length} model guides</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}</p></section><section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  const charging = topic.slug === chargingTopicSlug;
+  const description = charging ? `Port type, wired and wireless charging watts, headset jack and water rating for ${chargingSpecs.length} Moto G models from Motorola, plus ${models.length} charging port guides.` : topic.summary;
+  const schema = charging ? [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${topic.name} specs and repair guides`, description, url: routeUrl(`topics/${topic.slug}`), dateModified: chargingSpecsOn, citation: chargingSpecs.flatMap((row) => row.sources.map((source) => source.url)) }, trail.schema] : trail.schema;
+  return `${head({ title: `${topic.name} Repair Guides`, description, route: `topics/${topic.slug}`, schema, fullTitle: charging ? 'Motorola charging port specs and repair guides by model' : topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${models.length} model guides${charging ? ` · Charging specs updated ${chargingSpecsOn}` : ''}</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}${charging ? ` <a class="inline-link" href="#charging-specs">Compare charging specs by model</a>.` : ''}</p></section>${charging ? chargingSpecsSection() : ''}${charging ? '<h2 class="library-heading">Charging port guides by model</h2>' : ''}<section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 // 2026-11-11: SB 244 page refreshed against the chaptered text (leginfo, Chapter 704, published 10/12/2023), the BHGS
@@ -435,6 +456,7 @@ function llmsText() {
     `- [California Right to Repair Act (SB 244)](${routeUrl('right-to-repair')}): primary-source explainer`,
     `- [Parts directory](${routeUrl('parts')}): current Parts4Cells model categories`,
     `- [Source library](${routeUrl('sources')}): sources used and citation rules`,
+    `- [Charging specs by model](${routeUrl(`topics/${chargingTopicSlug}`)}#charging-specs): port, wired and wireless charging, headset jack and water rating for ${chargingSpecs.length} Moto G models from Motorola pages`,
     `- [Guide index data](${site.origin}/guide-index.json): JSON list of every guide with model, XT code, topic, and parts category`,
     '',
     '## Model hubs',
@@ -503,10 +525,13 @@ const indexTrailRoutes = ['guides', 'models', 'topics', 'parts', 'sources', 'rig
 // and their 45 guides (models whose records carry specs). Other routes are unchanged.
 const specsAddedOn = '2026-11-13';
 const specRoutes = new Set(models.filter((model) => model.specs).flatMap((model) => [`models/${model.slug}`, ...allGuides.filter((guide) => guide.model.slug === model.slug).map((guide) => `guides/${guide.slug}`)]));
+// 2026-11-16: charging specs table on the charging port hub; its 24 guides link to it (chargingRoutes).
 // 2026-11-15: /sources/ dated source table and the homepage sources band (catalog check date, link to /sources/).
 // 2026-11-14: listing photos on the XT2515 hub and the guides that show one (photoRoutes). Other routes are unchanged.
 const photoRoutes = new Map(models.filter((model) => model.partPhotos).flatMap((model) => [[`models/${model.slug}`, model.photosCheckedOn], ...model.partPhotos.map((photo) => [`guides/${model.slug}-${photo.topic}-repair-guide`, model.photosCheckedOn])]));
+const chargingRoutes = new Set([`topics/${chargingTopicSlug}`, ...allGuides.filter((guide) => guide.topic.slug === chargingTopicSlug).map((guide) => `guides/${guide.slug}`)]);
 const lastmodFor = (route) => {
+  if (chargingRoutes.has(route)) return chargingSpecsOn;
   if (photoRoutes.has(route)) return photoRoutes.get(route);
   if (specRoutes.has(route)) return specsAddedOn;
   if (route === 'right-to-repair') return lawCheckedOn;
