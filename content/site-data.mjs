@@ -29,6 +29,24 @@ export const sourceRecords = [
   { key: 'parts4cellsMotorola', group: 'parts', label: 'Parts4Cells Motorola category', publisher: 'Parts4Cells', version: 'Live catalog page listing eight Motorola series categories', use: 'Sourcing destination; each model record links its own exact category' },
 ];
 
+// 2026-11-16: charging facts by model for the charging port topic hub (/topics/charging-port/#charging-specs). Each row is
+// copied from the Motorola US support pages listed in its sources, opened on the row's checkedOn date (the three 2025
+// records reuse the pages opened 2026-11-13). Values are as Motorola lists them; "Not listed" means the page names no such
+// feature. The moto g 2026 and moto g stylus 2026 specifications pages on the US support site are published in French.
+export const chargingSpecsOn = '2026-11-16';
+export const chargingSpecs = [
+  { xtCode: 'XT2613', port: 'USB Type-C (USB 2.0)', wired: '30W', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'Splash-resistant design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189798', label: 'Specifications, moto g 2026 (French)' }, { url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189556', label: 'About your hardware, moto g 2026' }] },
+  { xtCode: 'XT2615', port: 'USB Type-C (USB 2.0)', wired: '18W', wireless: 'Not listed', jack: 'No 3.5 mm jack; headphones use USB Type-C', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189848', label: 'Specifications, moto g play 2026' }] },
+  { xtCode: 'XT2617', port: 'USB Type-C (USB 2.0)', wired: '30W', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'IP68 and IP69', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/190571', label: 'Specifications, moto g power 2026' }] },
+  { xtCode: 'XT2619', port: 'USB Type-C (USB 2.0)', wired: '68W TurboPower', wireless: '15W', jack: 'No 3.5 mm jack; headphones use USB Type-C (analog and digital)', water: 'IP68 and IP69', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/192579', label: 'Specifications, moto g stylus 2026 (French)' }] },
+  { xtCode: 'XT2515', port: 'USB Type-C (USB 2.0)', wired: '30W TurboPower', wireless: '15W', jack: '3.5 mm headset jack', water: 'IP68 and IP69', checkedOn: '2026-11-13', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/184283/~/specifications---moto-g-power---2025', label: 'Specifications, moto g power 2025' }] },
+  { xtCode: 'XT2513', port: 'USB Type-C (USB 2.0)', wired: '30W TurboPower', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'IP54', checkedOn: '2026-11-13', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/184288/~/specifications---moto-g---2025', label: 'Specifications, moto g 2025' }] },
+  { xtCode: 'XT2517-1/2/3', port: 'USB Type-C (USB 2.0)', wired: '68W TurboPower', wireless: '15W', jack: 'No 3.5 mm jack listed', water: 'IP68', checkedOn: '2026-11-13', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/185268/~/specifications---moto-g-stylus---2025', label: 'Specifications, moto g stylus 2025' }] },
+  { xtCode: 'XT2415', port: 'USB Type-C (USB 2.0)', wired: '30W (Motorola notes a 10W or 20W charger for certain carriers)', wireless: '15W', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/178714/~/specifications---moto-g-power-5g---2024', label: 'Specifications, moto g power 5G 2024' }] },
+  { xtCode: 'XT2413', port: 'USB Type-C (USB 2.0)', wired: '15W', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/177738/~/specifications--moto-g-play-(2024)', label: 'Specifications, moto g play 2024' }] },
+  { xtCode: 'XT2419', port: 'USB Type-C (USB 2.0)', wired: '30W TurboPower', wireless: '15W', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/181506/~/specifications---moto-g-stylus-5g---2024', label: 'Specifications, moto g stylus 5G 2024' }] },
+];
+
 const supportUrl = sources.motorolaSupport;
 
 export const models = [
