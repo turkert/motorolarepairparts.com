@@ -399,3 +399,15 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 .source-directory > * { min-width: 0; }
 .source-table th[scope="row"] { min-width: 180px; }
 .source-table td:last-child { white-space: nowrap; }
+
+/* 2026-11-16: charging specs table on the charging port topic hub */
+.charging-specs { margin: 0 0 56px; }
+.charging-specs > p { max-width: 760px; }
+.charging-specs .xt-table-wrap { margin-top: 18px; }
+.charging-table th, .charging-table td { white-space: normal; vertical-align: top; min-width: 120px; line-height: 1.45; }
+.charging-table tbody th { min-width: 150px; }
+.charging-table td:last-child { min-width: 200px; }
+.charging-table small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 560; }
+.charging-specs .check-list { margin-top: 12px; }
+.library-heading { margin: 0 0 22px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -0.02em; }
+.charging-table thead th:first-child, .charging-table tbody th { position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: 1px 0 0 var(--line); }
