@@ -290,17 +290,23 @@ check(publicOg.length <= 200000, `public/og.png is ${publicOg.length} bytes, bud
 // Motorola-published facts (2026-11-13): models with specs need a dated official specifications and hardware source,
 // and every guide and hub for them must show the full table, the dated source note and, on guides, the marked rows.
 const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery: ['battery', 'charging'], 'back-cover-rear-housing': ['back', 'ip', 'rear'], 'rear-camera': ['rear'], 'front-camera-sensors': ['front', 'fingerprint'], 'charging-port': ['port', 'charging', 'mics'], 'earpiece-speaker': ['audio'], loudspeaker: ['audio', 'port'], 'microphone-audio-flex': ['mics'], 'vibration-motor': [], 'sim-tray-reader': ['sim'], 'power-volume-buttons': ['fingerprint'], 'fingerprint-sensor': ['fingerprint', 'display'], 'camera-lens-cover': ['rear'], 'display-adhesive-seal': ['ip', 'display'] };
+// 2026-11-17: ten records (2024, 2025 and 2026 US Moto G). specsOn dates the facts apart from the catalog check, specsUrl
+// names the specifications page when supportUrl is another page, and the hardware page is optional where none was found.
 const specModels = models.filter((model) => model.specs);
-check(specModels.length === 3, `Expected 3 model records with Motorola-published facts, found ${specModels.length}`);
+check(specModels.length >= 3, `Expected at least 3 model records with Motorola-published facts, found ${specModels.length}`);
+const specsDateOf = (model) => model.specsOn || model.checkedOn;
+const specsUrlOf = (model) => model.specsUrl || model.supportUrl;
+const latest = (...dates) => dates.filter(Boolean).sort().pop();
+const guideDate = (model, topicSlug) => latest(topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model));
 const escText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 for (const model of specModels) {
-  check(model.supportUrl !== sources.motorolaSupport && new URL(model.supportUrl).hostname === 'en-us.support.motorola.com' && new URL(model.hardwareUrl || 'https://x.invalid').hostname === 'en-us.support.motorola.com', `${model.slug}: specs need Motorola US specifications and hardware pages`);
-  check(/^\d{4}-\d{2}-\d{2}$/.test(model.checkedOn || '') && model.hardwareLabel, `${model.slug}: specs need a check date and hardware label`);
+  check(specsUrlOf(model) !== sources.motorolaSupport && new URL(specsUrlOf(model)).hostname === 'en-us.support.motorola.com' && /specifications/i.test(model.specsLabel || model.supportLabel || '') && (!model.hardwareUrl || (new URL(model.hardwareUrl).hostname === 'en-us.support.motorola.com' && model.hardwareLabel)), `${model.slug}: specs need a Motorola US specifications page and, if given, a labelled hardware page`);
+  check(/^\d{4}-\d{2}-\d{2}$/.test(specsDateOf(model) || ''), `${model.slug}: specs need a check date`);
   check(new Set(model.specs.map((row) => row.key)).size === model.specs.length && model.specs.every((row) => row.label && row.value && !/[–—]/.test(row.value)), `${model.slug}: spec rows need unique keys, labels and values without dashes`);
   const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
   check(model.specs.every((row) => hub.includes(`<th scope="row">${escText(row.label)}</th><td>${escText(row.value)}</td>`)), `${model.slug}: hub is missing a Motorola-published fact`);
-  check(hub.includes(model.hardwareUrl) && hub.includes(`opened ${model.checkedOn}`) && !hub.includes('spec-flag'), `${model.slug}: hub spec table lacks its dated sources or marks rows`);
-  const hubDate = model.partPhotos?.length ? model.photosCheckedOn : model.checkedOn;
+  check(hub.includes(`href="${specsUrlOf(model)}">specifications</a>`) && (!model.hardwareUrl || hub.includes(model.hardwareUrl)) && hub.includes(`opened ${specsDateOf(model)}`) && !hub.includes('spec-flag'), `${model.slug}: hub spec table lacks its dated sources or marks rows`);
+  const hubDate = latest(model.partPhotos?.length ? model.photosCheckedOn : '', specsDateOf(model));
   check(sitemap.includes(`<loc>${site.origin}/models/${model.slug}/</loc><lastmod>${hubDate}</lastmod>`), `${model.slug}: hub lastmod is not ${hubDate}`);
   for (const guide of allGuides.filter((item) => item.model.slug === model.slug)) {
     const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
@@ -309,8 +315,9 @@ for (const model of specModels) {
     const expected = (specTopicKeys[guide.topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key));
     check(rows.length === model.specs.length, `${guide.slug}: spec table has ${rows.length} rows, expected ${model.specs.length}`);
     check(marked === expected.length, `${guide.slug}: ${marked} rows marked for this repair, expected ${expected.length}`);
-    const modified = guide.topic.slug === 'charging-port' ? chargingSpecsOn : model.partPhotos?.some((photo) => photo.topic === guide.topic.slug) ? model.photosCheckedOn : model.checkedOn;
-    check(html.includes(model.hardwareUrl) && html.includes(`Source review ${model.checkedOn}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing hardware source, ${model.checkedOn} review date or ${modified} dateModified`);
+    const modified = guideDate(model, guide.topic.slug);
+    const review = latest(model.checkedOn || site.verifiedOn, specsDateOf(model));
+    check(html.includes(`href="${specsUrlOf(model)}"`) && (!model.hardwareUrl || html.includes(model.hardwareUrl)) && html.includes(`Source review ${review}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing Motorola source, ${review} review date or ${modified} dateModified`);
     check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${modified}</lastmod>`), `${guide.slug}: lastmod is not ${modified}`);
   }
 }
@@ -380,14 +387,15 @@ for (const file of htmlFiles) {
     check(/^\d{4}-\d{2}-\d{2}$/.test(record.checkedOn) && record.checkedOn <= chargingSpecsOn && record.sources?.length && record.sources.every((source) => new URL(source.url).hostname === 'en-us.support.motorola.com' && source.label), `chargingSpecs: ${record.xtCode} needs a date and Motorola US support sources`);
     const row = rows[index] || '';
     check(model && row.includes(`${escText(model.shortName)}</a><small>${escText(model.xtCode)}</small>`) && ['port', 'wired', 'wireless', 'jack', 'water'].every((key) => row.includes(`<td>${escText(record[key])}</td>`)) && record.sources.every((source) => row.includes(source.url)) && row.includes(`Opened ${record.checkedOn}`), `charging-port: row ${record.xtCode} does not match its record`);
-    if (model?.specs) check(record.sources.some((source) => source.url === model.supportUrl) && record.checkedOn === model.checkedOn, `chargingSpecs: ${record.xtCode} should cite the model's specifications page and date`);
+    if (model?.specs) check(record.sources.some((source) => source.url.split('/~/')[0] === specsUrlOf(model).split('/~/')[0]) && record.checkedOn <= specsDateOf(model), `chargingSpecs: ${record.xtCode} should cite the model's specifications page, opened no later than its facts`);
   });
   check(hub.includes('id="charging-specs"') && hub.includes(`Charging specs updated ${chargingSpecsOn}`) && hub.includes(`"dateModified":"${chargingSpecsOn}"`) && hub.includes('<title>Motorola charging port specs and repair guides by model</title>'), 'charging-port: hub lacks the table anchor, dated eyebrow, CollectionPage date or title');
   check(sitemap.includes(`<loc>${site.origin}/topics/charging-port/</loc><lastmod>${chargingSpecsOn}</lastmod>`), 'charging-port: hub lastmod is not the charging specs date');
   for (const guide of allGuides.filter((item) => item.topic.slug === 'charging-port')) {
     const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
-    check(html.includes('<p data-charging-link>') && html.includes('href="/topics/charging-port/#charging-specs"') && html.includes(`"dateModified":"${chargingSpecsOn}"`), `${guide.slug}: missing charging specs link or dateModified`);
-    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${chargingSpecsOn}</lastmod>`), `${guide.slug}: lastmod is not ${chargingSpecsOn}`);
+    const due = guide.model.specs ? guideDate(guide.model, 'charging-port') : chargingSpecsOn;
+    check(html.includes('<p data-charging-link>') && html.includes('href="/topics/charging-port/#charging-specs"') && html.includes(`"dateModified":"${due}"`), `${guide.slug}: missing charging specs link or dateModified`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${due}</lastmod>`), `${guide.slug}: lastmod is not ${due}`);
   }
   for (const topic of topics.filter((item) => item.slug !== 'charging-port')) {
     const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
