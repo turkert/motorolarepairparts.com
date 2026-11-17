@@ -293,7 +293,7 @@ const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery:
 // 2026-11-17: ten records (2024, 2025 and 2026 US Moto G). specsOn dates the facts apart from the catalog check, specsUrl
 // names the specifications page when supportUrl is another page, and the hardware page is optional where none was found.
 const specModels = models.filter((model) => model.specs);
-check(specModels.length >= 3, `Expected at least 3 model records with Motorola-published facts, found ${specModels.length}`);
+check(specModels.length === 10, `Expected 10 model records with Motorola-published facts, found ${specModels.length}`);
 const specsDateOf = (model) => model.specsOn || model.checkedOn;
 const specsUrlOf = (model) => model.specsUrl || model.supportUrl;
 const latest = (...dates) => dates.filter(Boolean).sort().pop();
