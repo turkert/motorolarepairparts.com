@@ -297,7 +297,7 @@ check(specModels.length === 10, `Expected 10 model records with Motorola-publish
 const specsDateOf = (model) => model.specsOn || model.checkedOn;
 const specsUrlOf = (model) => model.specsUrl || model.supportUrl;
 const latest = (...dates) => dates.filter(Boolean).sort().pop();
-const guideDate = (model, topicSlug) => latest(topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model));
+const guideDate = (model, topicSlug) => latest(topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
 const escText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 for (const model of specModels) {
   check(specsUrlOf(model) !== sources.motorolaSupport && new URL(specsUrlOf(model)).hostname === 'en-us.support.motorola.com' && /specifications/i.test(model.specsLabel || model.supportLabel || '') && (!model.hardwareUrl || (new URL(model.hardwareUrl).hostname === 'en-us.support.motorola.com' && model.hardwareLabel)), `${model.slug}: specs need a Motorola US specifications page and, if given, a labelled hardware page`);
@@ -306,7 +306,7 @@ for (const model of specModels) {
   const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
   check(model.specs.every((row) => hub.includes(`<th scope="row">${escText(row.label)}</th><td>${escText(row.value)}</td>`)), `${model.slug}: hub is missing a Motorola-published fact`);
   check(hub.includes(`href="${specsUrlOf(model)}">specifications</a>`) && (!model.hardwareUrl || hub.includes(model.hardwareUrl)) && hub.includes(`opened ${specsDateOf(model)}`) && !hub.includes('spec-flag'), `${model.slug}: hub spec table lacks its dated sources or marks rows`);
-  const hubDate = latest(model.partPhotos?.length ? model.photosCheckedOn : '', specsDateOf(model));
+  const hubDate = latest(model.partPhotos?.length ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
   check(sitemap.includes(`<loc>${site.origin}/models/${model.slug}/</loc><lastmod>${hubDate}</lastmod>`), `${model.slug}: hub lastmod is not ${hubDate}`);
   for (const guide of allGuides.filter((item) => item.model.slug === model.slug)) {
     const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
@@ -322,6 +322,28 @@ for (const model of specModels) {
   }
 }
 
+
+// 2026-11-18: dated catalog listings. Each record with catalogListings has a catalog date and note; every listing has a
+// title, an item number and a known topic (or 'other'); each guide shows its own titles, or the dated "no listing" line;
+// the hub shows one row per guide with the right count, the listings not covered by a guide, and the note once.
+const catalogModels = models.filter((model) => model.catalogListings);
+check(catalogModels.length === 3 && ['XT2415', 'XT2413', 'XT2419'].every((code) => catalogModels.some((model) => model.xtCode === code)), `Expected catalog listings for XT2415, XT2413 and XT2419, found ${catalogModels.map((model) => model.xtCode).join(', ')}`);
+for (const model of catalogModels) {
+  check(/^\d{4}-\d{2}-\d{2}$/.test(model.checkedOn || '') && model.checkedOn !== site.verifiedOn && model.catalogNote && !/[\u2013\u2014]/.test(model.catalogNote), `${model.slug}: catalog listings need a new checkedOn date and a note without dashes`);
+  check(model.catalogListings.length > 0 && model.catalogListings.every((item) => item.title && /^\d{6,12}$/.test(item.item) && !/[\u2013\u2014]/.test(item.title) && (item.topic === 'other' || topics.some((topic) => topic.slug === item.topic))) && new Set(model.catalogListings.map((item) => item.item)).size === model.catalogListings.length, `${model.slug}: catalog listings need unique item numbers, titles and known topics`);
+  const hub = await readFile(join(outputDir, 'models', model.slug, 'index.html'), 'utf8');
+  const hubRows = captures(hub, /<table class="xt-table facts-table catalog-table">[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/g)[0] || '';
+  check((hubRows.match(/<tr>/g) || []).length === topics.length && hub.includes('id="catalog-listings"') && hub.includes(`listed on ${model.checkedOn}`) && (hub.match(/class="catalog-note"/g) || []).length === 1, `${model.slug}: hub catalog table needs ${topics.length} rows, its date and one note`);
+  for (const item of model.catalogListings.filter((entry) => entry.topic === 'other')) check(hub.includes(`<span>${escText(item.title)}</span><small>Item ${item.item}`), `${model.slug}: hub is missing the uncovered listing ${item.item}`);
+  check(hub.includes(`Live model-relevant catalog checked ${model.checkedOn}`) || !hub.includes('Live model-relevant catalog checked'), `${model.slug}: hub shows an old catalog date`);
+  for (const guide of allGuides.filter((entry) => entry.model.slug === model.slug)) {
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    const items = model.catalogListings.filter((item) => item.topic === guide.topic.slug);
+    const row = hubRows.split('</tr>').find((part) => part.includes(`/guides/${guide.slug}/`)) || '';
+    check(row.includes(`<td>${items.length || 'None'}</td>`), `${guide.slug}: hub count is not ${items.length}`);
+    check(html.includes(`data-catalog-check="${items.length}"`) && html.includes(`Catalog check ${model.checkedOn}`) && html.includes(`Live model-relevant catalog checked ${model.checkedOn}`) && items.every((item) => html.includes(`<span>${escText(item.title)}</span><small>Item ${item.item}`)) && (html.match(/<li><span>[^<]*<\/span><small>Item /g) || []).length === items.length, `${guide.slug}: catalog check block does not match its ${items.length} listings dated ${model.checkedOn}`);
+  }
+}
 
 // 2026-11-14: listing photos. Each photo file exists in public/ and the build, is WebP 800 x 600 and at most 60 KB;
 // the guide for its topic shows it once with width, height, alt, lazy loading and a dated caption, and its Article JSON-LD
