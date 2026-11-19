@@ -292,6 +292,24 @@ check(publicOg.length <= 200000, `public/og.png is ${publicOg.length} bytes, bud
 const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery: ['battery', 'charging'], 'back-cover-rear-housing': ['back', 'ip', 'rear'], 'rear-camera': ['rear'], 'front-camera-sensors': ['front', 'fingerprint'], 'charging-port': ['port', 'charging', 'mics'], 'earpiece-speaker': ['audio'], loudspeaker: ['audio', 'port'], 'microphone-audio-flex': ['mics'], 'vibration-motor': [], 'sim-tray-reader': ['sim'], 'power-volume-buttons': ['fingerprint'], 'fingerprint-sensor': ['fingerprint', 'display'], 'camera-lens-cover': ['rear'], 'display-adhesive-seal': ['ip', 'display'] };
 // 2026-11-17: ten records (2024, 2025 and 2026 US Moto G). specsOn dates the facts apart from the catalog check, specsUrl
 // names the specifications page when supportUrl is another page, and the hardware page is optional where none was found.
+// 2026-11-19: the three hero cards on every guide are links: XT code to /xt-code/#lookup, year to the model hub,
+// diagnostic area to the topic hub, each with a visible cue. Dates are unchanged (navigation, not content), but every
+// guide's sitemap lastmod is at least guideMetaLinksOn. No other page type carries the cards.
+const guideMetaLinksOn = '2026-11-19';
+{
+  const lastmods = new Map([...sitemap.matchAll(/<loc>([^<]+)<\/loc><lastmod>([^<]+)<\/lastmod>/g)].map((match) => [match[1], match[2]]));
+  for (const guide of allGuides) {
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    const block = html.match(/<div class="article-meta" data-meta-links>([\s\S]*?)<\/div>/);
+    const links = block ? [...block[1].matchAll(/<a href="([^"]+)"><strong>([^<]+)<\/strong><span>([^<]+)<\/span><em class="meta-cue">[^<]+<b aria-hidden="true">&nearr;<\/b><\/em><\/a>/g)] : [];
+    const expected = [['/xt-code/#lookup', guide.model.xtCode, 'model identifier'], [`/models/${guide.model.slug}/`, String(guide.model.year), 'catalog generation'], [`/topics/${guide.topic.slug}/`, guide.topic.supportArea, 'diagnostic area']];
+    check(links.length === 3 && expected.every(([href, value, label], index) => links[index][1] === href && links[index][2] === value.replace(/&/g, '&amp;') && links[index][3] === label), `${guide.slug}: hero cards are not the three expected links`);
+    check((html.match(/class="article-meta"/g) || []).length === 1, `${guide.slug}: expected one hero card row`);
+    check((lastmods.get(`${site.origin}/guides/${guide.slug}/`) || '') >= guideMetaLinksOn, `${guide.slug}: lastmod is older than ${guideMetaLinksOn}`);
+  }
+  const xt = await readFile(join(outputDir, 'xt-code', 'index.html'), 'utf8');
+  check(xt.includes('id="lookup"'), 'xt-code: #lookup anchor missing for the guide hero cards');
+}
 const specModels = models.filter((model) => model.specs);
 check(specModels.length === 10, `Expected 10 model records with Motorola-published facts, found ${specModels.length}`);
 const specsDateOf = (model) => model.specsOn || model.checkedOn;
@@ -318,7 +336,7 @@ for (const model of specModels) {
     const modified = guideDate(model, guide.topic.slug);
     const review = latest(model.checkedOn || site.verifiedOn, specsDateOf(model));
     check(html.includes(`href="${specsUrlOf(model)}"`) && (!model.hardwareUrl || html.includes(model.hardwareUrl)) && html.includes(`Source review ${review}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing Motorola source, ${review} review date or ${modified} dateModified`);
-    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${modified}</lastmod>`), `${guide.slug}: lastmod is not ${modified}`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${latest(modified, guideMetaLinksOn)}</lastmod>`), `${guide.slug}: lastmod is not ${latest(modified, guideMetaLinksOn)}`);
   }
 }
 
@@ -417,7 +435,7 @@ for (const file of htmlFiles) {
     const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
     const due = guide.model.specs ? guideDate(guide.model, 'charging-port') : chargingSpecsOn;
     check(html.includes('<p data-charging-link>') && html.includes('href="/topics/charging-port/#charging-specs"') && html.includes(`"dateModified":"${due}"`), `${guide.slug}: missing charging specs link or dateModified`);
-    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${due}</lastmod>`), `${guide.slug}: lastmod is not ${due}`);
+    check(sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${latest(due, guideMetaLinksOn)}</lastmod>`), `${guide.slug}: lastmod is not ${latest(due, guideMetaLinksOn)}`);
   }
   for (const topic of topics.filter((item) => item.slug !== 'charging-port')) {
     const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');

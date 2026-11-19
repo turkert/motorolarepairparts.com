@@ -171,6 +171,15 @@ const guideModified = (model, topic) => {
   return dates.length ? dates.sort().pop() : photoDate(model, topic);
 };
 const hubModified = (model) => [model.specs ? specsDate(model) : '', model.partPhotos?.length ? model.photosCheckedOn : '', model.catalogListings ? model.checkedOn : ''].filter(Boolean).sort().pop();
+// 2026-11-19: the three hero cards on every guide are links. Clarity (last 7 days to 2026-11-19) recorded repeated mobile
+// taps with no effect on the "model identifier" card. Code card: where Motorola shows the code (/xt-code/#lookup); year
+// card: the model hub with all of its guides; area card: the same repair on other models (topic hub).
+const guideMetaLinksOn = '2026-11-19';
+const guideMetaCards = (model, topic) => `<div class="article-meta" data-meta-links>${[
+  { href: '/xt-code/#lookup', value: model.xtCode, label: 'model identifier', cue: 'How to check the code' },
+  { href: `/models/${model.slug}/`, value: String(model.year), label: 'catalog generation', cue: `All ${topics.length} guides for this model` },
+  { href: `/topics/${topic.slug}/`, value: topic.supportArea, label: 'diagnostic area', cue: 'Same repair, other models' },
+].map((card) => `<a href="${card.href}"><strong>${esc(card.value)}</strong><span>${esc(card.label)}</span><em class="meta-cue">${esc(card.cue)} <b aria-hidden="true">&nearr;</b></em></a>`).join('')}</div>`;
 // 2026-11-18: dated catalog listings (model.catalogListings). Guides show the listing titles for their part, or say the
 // category had none on that date; hubs show a per-component count. Titles are as the category showed them; no links,
 // prices or stock. A title that does not name the model's XT code is flagged.
@@ -370,7 +379,7 @@ function guidePage(guide) {
   return `${head({ title, description, route: `guides/${guide.slug}`, schema: [schema, trail.schema], fullTitle: metaTitle })}${header()}<main id="main" class="article-shell">
   <article>
     ${trail.html}
-    <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${reviewDate(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p><div class="article-meta"><div><strong>${esc(model.xtCode)}</strong><span>model identifier</span></div><div><strong>${model.year}</strong><span>catalog generation</span></div><div><strong>${esc(topic.supportArea)}</strong><span>diagnostic area</span></div></div></header>
+    <header class="article-hero"><p class="eyebrow">Guide ${String(guide.id).padStart(3, '0')} · Source review ${reviewDate(model)}</p><h1>${esc(title)}</h1><p class="article-deck">${esc(topic.summary)} This guide helps document what to verify before opening the device or ordering a part. It does not reproduce disassembly instructions.</p>${guideMetaCards(model, topic)}</header>
     <section class="quick-take"><strong>Quick take</strong><p>Do not order from the symptom alone. Confirm ${esc(model.xtCode)}, isolate the failed function, review current Motorola repair information, and capture the live model-category URL used for the sourcing decision.</p></section>
     <section class="content-section"><h2>Which symptoms make this component a candidate?</h2><ul class="check-list">${topic.signals.map((item) => `<li>${esc(item)}</li>`).join('')}</ul><p>These observations narrow the diagnostic path. They do not prove that ${esc(topic.partLabel)} is the failed part.</p></section>
     <section class="content-section"><h2>Confirm the exact Motorola model first</h2><p>${esc(model.context)}</p><div class="identity-card"><span>${esc(model.family)}</span><strong>${esc(model.name)}</strong><small>Primary identifier: ${esc(model.xtCode)}</small></div>${model.specs ? `<h3 class="spec-heading">What Motorola publishes for this model</h3>${specTable(model, topic)}` : ''}<p>Not sure which code the phone carries? <a class="inline-link" href="/xt-code/">See where Motorola shows the model number</a> and compare it with ${esc(model.xtCode)} before ordering.</p>${topic.slug === chargingTopicSlug ? `<p data-charging-link>${chargingSpecs.some((row) => row.xtCode === model.xtCode) ? `See the ${esc(model.shortName)} next to other Moto G models in the` : 'Port, charging and water ratings for other Moto G models are in the'} <a class="inline-link" href="${chargingSpecsAnchor}">charging specs by model table</a>.</p>` : ''}</section>${guidePhotoSection(model, topic)}
@@ -572,6 +581,10 @@ const specRoutes = new Map(models.filter((model) => model.specs).flatMap((model)
 const photoRoutes = new Map(models.filter((model) => model.partPhotos).flatMap((model) => [[`models/${model.slug}`, model.photosCheckedOn], ...model.partPhotos.map((photo) => [`guides/${model.slug}-${photo.topic}-repair-guide`, model.photosCheckedOn])]));
 const chargingRoutes = new Set([`topics/${chargingTopicSlug}`, ...allGuides.filter((guide) => guide.topic.slug === chargingTopicSlug).map((guide) => `guides/${guide.slug}`)]);
 const lastmodFor = (route) => {
+  const base = baseLastmod(route);
+  return /^guides\/./.test(route) && guideMetaLinksOn > base ? guideMetaLinksOn : base;
+};
+const baseLastmod = (route) => {
   if (specRoutes.has(route)) return specRoutes.get(route);
   if (chargingRoutes.has(route)) return chargingSpecsOn;
   if (photoRoutes.has(route)) return photoRoutes.get(route);
