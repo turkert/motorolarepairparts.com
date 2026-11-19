@@ -223,10 +223,18 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 .breadcrumbs { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 30px; color: var(--muted); font-size: 13px; }
 .breadcrumbs a { color: var(--blue); }
 .article-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; max-width: 840px; margin-top: 42px; overflow: hidden; border: 1px solid var(--line); border-radius: 22px; background: var(--line); }
-.article-meta div { min-height: 105px; padding: 24px; background: #fff; }
+.article-meta div, .article-meta a { min-height: 105px; padding: 24px; background: #fff; }
 .article-meta strong, .article-meta span { display: block; }
 .article-meta strong { margin-bottom: 8px; font-size: 17px; }
 .article-meta span { color: var(--muted); font-size: 12px; }
+/* 2026-11-19: the three hero cards on guides are links (Clarity showed taps on the model identifier card). */
+.article-meta a { display: flex; flex-direction: column; color: var(--ink); transition: background-color 160ms ease; }
+.article-meta a .meta-cue { margin-top: auto; padding-top: 14px; color: var(--blue); font-size: 13px; font-style: normal; font-weight: 600; }
+.article-meta a .meta-cue b { display: inline-block; margin-left: 4px; transition: transform 160ms ease; }
+.article-meta a:hover, .article-meta a:focus-visible { background: #f7f9ff; }
+.article-meta a:hover .meta-cue b, .article-meta a:focus-visible .meta-cue b { transform: translate(2px, -2px); }
+.article-meta a:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .article-meta a .meta-cue b { transition: none; } .article-meta a:hover .meta-cue b { transform: none; } }
 .quick-take { display: grid; grid-template-columns: 150px 1fr; gap: 28px; margin: 0 0 72px; padding: 30px; border: 1px solid rgba(23,105,255,.2); border-radius: 24px; background: #edf3ff; }
 .quick-take strong { color: var(--blue); font-size: 12px; letter-spacing: .09em; text-transform: uppercase; }
 .quick-take p { margin: 0; line-height: 1.65; }
