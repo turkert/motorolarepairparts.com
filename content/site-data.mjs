@@ -219,3 +219,36 @@ export const allGuides = models.flatMap((model, modelIndex) =>
     topic,
   })),
 );
+
+// 2026-11-20: Motorola Razr screens by XT code (/razr-screens/). Razr phones are not model records on this site; this
+// page compares their two screens only. Display facts are copied from each phone's Motorola US specifications page,
+// opened in Chrome on razrScreensOn. Names after the slash in catalogName are the pairings the Parts4Cells category
+// titles use. razrListings holds every listing in the six Parts4Cells Razr categories on razrScreensOn (title as listed,
+// item number read on the product page); xtCodes are the codes the title names.
+export const razrScreensOn = '2026-11-20';
+export const razrSeriesUrl = 'https://parts4cells.com/motorola/razr-series.html';
+export const razrModels = [
+  { xtCode: 'XT2453', year: 2024, usName: 'motorola razr 2024', catalogName: 'Razr 2024 / Razr 50', specsUrl: 'https://en-us.support.motorola.com/app/answers/detail/a_id/181495', main: '6.9 in pOLED, FHD+ 2640 x 1080, foldable AMOLED, LTPO, up to 120 Hz', external: '3.6 in pOLED, 1056 x 1066, flexible AMOLED, LTPS, up to 90 Hz', water: 'IPX8 water-resistant design', colors: 'Koala Grey, Beach Sand, Spritz Orange', categories: ['Razr 2024 / Razr 50 (XT2453 / 2024)'] },
+  { xtCode: 'XT2451', year: 2024, usName: 'motorola razr+ 2024', catalogName: 'Razr Plus 2024 / Razr 50 Ultra', specsUrl: 'https://en-us.support.motorola.com/app/answers/detail/a_id/181473', main: '6.9 in pOLED, FHD+ 2640 x 1080, foldable AMOLED, LTPO, up to 165 Hz', external: '4.0 in pOLED, 1272 x 1080, flexible AMOLED, LTPO, up to 165 Hz', water: 'IPX8 water-resistant design', colors: 'Midnight Blue, Peach Fuzz, Hot Pink, Spring Green', categories: ['Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024)'] },
+  { xtCode: 'XT2553', year: 2025, usName: 'motorola razr 2025', catalogName: 'Razr 2025 / Razr 60', specsUrl: 'https://en-us.support.motorola.com/app/answers/detail/a_id/187124', main: '6.9 in pOLED, FHD+ 2640 x 1080, foldable AMOLED, LTPO, up to 120 Hz', external: '3.6 in pOLED, 1056 x 1066, flexible AMOLED, LTPS, up to 90 Hz', water: 'IP48 dust and water protection', colors: '', categories: ['Razr 2025 / Razr 60 (XT2553 / 2025)'] },
+  { xtCode: 'XT2557', year: 2025, usName: 'motorola razr+ 2025', catalogName: 'Razr Plus 2025', specsUrl: 'https://en-us.support.motorola.com/app/answers/detail/a_id/187130', main: '6.9 in pOLED, FHD+ 2640 x 1080, foldable AMOLED, LTPO, up to 165 Hz', external: '4.0 in pOLED, 1272 x 1080, flexible AMOLED, LTPS, up to 165 Hz', water: 'IP48 water-resistant design', colors: '', categories: ['Razr Plus 2025 (XT2557)'] },
+  { xtCode: 'XT2551', year: 2025, usName: 'motorola razr ultra 2025', catalogName: 'Razr Ultra 2025 / Razr 60 Ultra', specsUrl: 'https://en-us.support.motorola.com/app/answers/detail/a_id/187404', main: '7.0 in Super HD 2992 x 1224, foldable AMOLED, LTPO, up to 165 Hz', external: '4.0 in pOLED, 1272 x 1080, flexible AMOLED, LTPO, up to 165 Hz', water: 'IP48 dust and underwater protection', colors: '', categories: ['Razr Ultra 2025 (XT2551 / 2025)', 'Razr 60 Ultra (XT2551 / 2025)'] },
+];
+export const razrListings = [
+  { item: '210000026956', screen: 'inner', color: 'Koala Grey', xtCodes: ['XT2453'], title: 'Motorola Razr 2024 / Razr 50 (XT2453 / 2024) Inner LCD with Touch + Frame (Koala Grey)' },
+  { item: '210000026955', screen: 'inner', color: 'Beach Sand', xtCodes: ['XT2453'], title: 'Motorola Razr 2024 / Razr 50 (XT2453 / 2024) Inner LCD with Touch + Frame (Beach Sand)' },
+  { item: '210000026954', screen: 'inner', color: 'Spritz Orange', xtCodes: ['XT2453'], title: 'Motorola Razr 2024 / Razr 50 (XT2453 / 2024) Inner LCD with Touch + Frame (Spritz Orange)' },
+  { item: '210000026953', screen: 'outer', color: 'Black', xtCodes: ['XT2453', 'XT2553'], title: 'Motorola Razr 2024 / Razr 50 (XT2453 / 2024) /Razr 2025 / Razr 60 (XT2553 / 2025) Outer LCD with Touch Black' },
+  { item: '210000026952', screen: 'inner', color: 'Hot Pink', xtCodes: ['XT2451', 'XT2557'], title: 'Motorola Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024) / Razr Plus 2025 (XT2557) Inner LCD with Touch + Frame (Hot Pink)' },
+  { item: '210000026951', screen: 'inner', color: 'Spring Green', xtCodes: ['XT2451', 'XT2557'], title: 'Motorola Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024) / Razr Plus 2025 (XT2557) Inner LCD with Touch + Frame (Spring Green)' },
+  { item: '210000026950', screen: 'inner', color: 'Peach Fuzz', xtCodes: ['XT2451', 'XT2557'], title: 'Motorola Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024) / Razr Plus 2025 (XT2557) Inner LCD with Touch + Frame (Peach Fuzz)' },
+  { item: '210000026949', screen: 'inner', color: 'Midnight Blue', xtCodes: ['XT2451', 'XT2557'], title: 'Motorola Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024) / Razr Plus 2025 (XT2557) Inner LCD with Touch + Frame (Midnight Blue)' },
+  { item: '210000026948', screen: 'outer', color: 'Black', xtCodes: ['XT2451', 'XT2557'], title: 'Motorola Razr Plus 2024 / Razr 50 Ultra (XT2451 / 2024) / Razr Plus 2025 (XT2557) Outer LCD with Touch Black' },
+  { item: '210000026964', screen: 'inner', color: 'Spring Bud', xtCodes: ['XT2553'], title: 'Motorola Razr 2025 / Razr 60 (XT2553 / 2025) Inner LCD with Touch + Frame (Spring Bud)' },
+  { item: '210000026963', screen: 'inner', color: 'Lightest Sky', xtCodes: ['XT2553'], title: 'Motorola Razr 2025 / Razr 60 (XT2553 / 2025) Inner LCD with Touch + Frame (Lightest Sky)' },
+  { item: '210000026962', screen: 'inner', color: 'Gibraltar Sea', xtCodes: ['XT2553'], title: 'Motorola Razr 2025 / Razr 60 (XT2553 / 2025) Inner LCD with Touch + Frame (Gibraltar Sea)' },
+  { item: '210000026965', screen: 'inner', color: 'Parfait Pink', xtCodes: ['XT2553'], title: 'Motorola Razr 2025 / Razr 60 (XT2553 / 2025) Inner LCD with Touch + Frame (Parfait Pink)' },
+  { item: '210000026961', screen: 'inner', color: 'Moutain Trail', xtCodes: ['XT2551'], title: 'Motorola Razr Ultra 2025 (XT2551 / 2025) / Razr 60 Ultra (XT2551 / 2025) Inner LCD with Touch + Frame (Moutain Trail)' },
+  { item: '210000026960', screen: 'inner', color: 'Scarab', xtCodes: ['XT2551'], title: 'Motorola Razr Ultra 2025 (XT2551 / 2025) / Razr 60 Ultra (XT2551 / 2025) Inner LCD with Touch + Frame (Scarab)' },
+  { item: '210000026959', screen: 'inner', color: 'Rio Red', xtCodes: ['XT2551'], title: 'Motorola Razr Ultra 2025 (XT2551 / 2025) / Razr 60 Ultra (XT2551 / 2025) Inner LCD with Touch + Frame (Rio Red)' },
+];
