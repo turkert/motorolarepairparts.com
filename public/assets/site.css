@@ -429,3 +429,9 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 .catalog-section .xt-table-wrap { margin-top: 16px; }
 .catalog-table td { font-variant-numeric: tabular-nums; }
 .catalog-other { margin: 18px 0 0; color: #4f525a; font-size: 15px; }
+
+/* 2026-11-20: /razr-screens/ listings column and the Razr note on the display assembly hub. */
+.razr-listings { margin: 0; padding: 0; list-style: none; }
+.razr-listings li + li { margin-top: 8px; }
+.razr-table td:nth-child(3), .razr-table td:nth-child(4) { min-width: 210px; }
+.razr-note { margin: 0 0 28px; }
