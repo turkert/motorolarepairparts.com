@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, chargingSpecs, chargingSpecsOn, models, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(projectRoot, 'dist-static');
@@ -73,7 +73,7 @@ function pngDimensions(buffer) {
 // Expected counts follow the model records (20 originals; 24 since 2026-11-07 with four 2026 Moto G models).
 const M = models.length;
 const G = M * topics.length;
-const H = G + M + topics.length + 10; // 10 = home, 6 index/reference pages, privacy, xt-code (2026-11-09), 404
+const H = G + M + topics.length + 11; // 11 = home, 6 index/reference pages, privacy, xt-code (2026-11-09), razr-screens (2026-11-20), 404
 check(M >= 20, `Source data contains ${M} models, expected at least 20`);
 check(allGuides.length === G, `Source data contains ${allGuides.length} guides, expected ${G}`);
 check(topics.length === 15, `Source data contains ${topics.length} topics, expected 15`);
@@ -441,6 +441,34 @@ for (const file of htmlFiles) {
     const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
     check(!html.includes('data-charging-row'), `${topic.slug}: shows the charging table`);
   }
+}
+
+// 2026-11-20: /razr-screens/. Five Razr records with their Motorola specifications page, every Parts4Cells Razr listing
+// with a unique item number and only Razr codes, one row per model in both tables, the listing counts the bench notes
+// rely on, at most two Parts4Cells links, links to it from four pages and llms.txt, and the page's lastmod.
+{
+  const razrCodes = ['XT2453', 'XT2451', 'XT2553', 'XT2557', 'XT2551'];
+  check(razrModels.length === 5 && razrCodes.every((code) => razrModels.some((model) => model.xtCode === code)), `razr-screens: expected records for ${razrCodes.join(', ')}`);
+  check(razrModels.every((model) => /^https:\/\/en-us\.support\.motorola\.com\/app\/answers\/detail\/a_id\/\d+$/.test(model.specsUrl) && model.main && model.external && model.water), 'razr-screens: a record lacks its Motorola specifications page or display facts');
+  check(!razrModels.some((model) => models.some((record) => record.xtCode === model.xtCode)), 'razr-screens: a Razr code is also a model record');
+  check(new Set(razrListings.map((item) => item.item)).size === razrListings.length && razrListings.length === 16, `razr-screens: expected 16 listings with unique item numbers, found ${razrListings.length}`);
+  check(razrListings.every((item) => ['inner', 'outer'].includes(item.screen) && item.xtCodes.length && item.xtCodes.every((code) => razrCodes.includes(code) && item.title.includes(code)) && item.title.includes(item.screen === 'inner' ? 'Inner LCD with Touch + Frame' : 'Outer LCD with Touch')), 'razr-screens: a listing has a wrong screen, code or title');
+  check(razrModels.every((model) => razrListings.some((item) => item.screen === 'inner' && item.xtCodes.includes(model.xtCode))), 'razr-screens: a model has no inner listing');
+  check(!razrListings.some((item) => item.screen === 'outer' && item.xtCodes.includes('XT2551')), 'razr-screens: bench note says XT2551 has no outer listing');
+  const page = await readFile(join(outputDir, 'razr-screens', 'index.html'), 'utf8');
+  checkBreadcrumbs(page, 'razr-screens', ['Home', 'Models', 'Razr screens']);
+  check((page.match(/<h1[\s>]/g) || []).length === 1, 'razr-screens: expected one H1');
+  check((page.match(/data-razr-row=/g) || []).length === 5 && (page.match(/data-razr-listings=/g) || []).length === 5, 'razr-screens: expected 5 rows in each table');
+  for (const item of razrListings) check(page.includes(`Item ${item.item}`), `razr-screens: missing item ${item.item}`);
+  for (const model of razrModels) check(page.includes(`href="${model.specsUrl}"`), `razr-screens: missing Motorola source for ${model.xtCode}`);
+  check((page.match(/href="https:\/\/parts4cells\.com[^"]*"/g) || []).length <= 2 && page.includes(`href="${razrSeriesUrl}"`), 'razr-screens: more than two Parts4Cells links or the Razr series link is missing');
+  check(page.includes(`"dateModified":"${razrScreensOn}"`) && sitemap.includes(`<loc>${site.origin}/razr-screens/</loc><lastmod>${razrScreensOn}</lastmod>`), 'razr-screens: dateModified or lastmod is wrong');
+  check(!/[–—]/.test(page), 'razr-screens: contains an en or em dash');
+  for (const route of ['models', 'parts', 'xt-code', 'topics/display-assembly']) {
+    check((await readFile(join(outputDir, route, 'index.html'), 'utf8')).includes('href="/razr-screens/"'), `${route}: missing link to /razr-screens/`);
+    check(sitemap.includes(`<loc>${site.origin}/${route}/</loc><lastmod>${razrScreensOn}</lastmod>`), `${route}: lastmod is not ${razrScreensOn}`);
+  }
+  check(llms.includes(`${site.origin}/razr-screens/`), 'llms.txt: missing /razr-screens/');
 }
 
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
