@@ -137,7 +137,7 @@ const topicSpecKeys = {
   'earpiece-speaker': ['audio'],
   loudspeaker: ['audio', 'port'],
   'microphone-audio-flex': ['mics'],
-  'vibration-motor': [],
+  'vibration-motor': ['haptics'],
   'sim-tray-reader': ['sim'],
   'power-volume-buttons': ['fingerprint'],
   'fingerprint-sensor': ['fingerprint', 'display'],
@@ -147,7 +147,8 @@ const topicSpecKeys = {
 
 function specTable(model, topic = null) {
   if (!model.specs?.length) return '';
-  const relevant = topic ? topicSpecKeys[topic.slug] || [] : [];
+  // 2026-11-21: only keys the model actually lists count as relevant (the haptics key exists on one record only).
+  const relevant = topic ? (topicSpecKeys[topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key)) : [];
   const rows = [...model.specs].sort((a, b) => (relevant.includes(b.key) ? 1 : 0) - (relevant.includes(a.key) ? 1 : 0) || relevant.indexOf(a.key) - relevant.indexOf(b.key));
   const body = rows.map((row) => {
     const hit = relevant.includes(row.key);
@@ -166,8 +167,12 @@ const photoFor = (model, topic) => model.partPhotos?.find((photo) => photo.topic
 const photoDate = (model, topic = null) => (model.photosCheckedOn && (!topic || photoFor(model, topic)) ? model.photosCheckedOn : checkedOn(model));
 // A guide's dateModified (and sitemap lastmod) is the newest dated change that reaches it: the charging specs table link,
 // a listing photo or the Motorola facts table. Guides without any of these keep their earlier date.
+// 2026-11-21: guides whose topic keys match none of the model's rows no longer claim marked rows; the two XT2617 guides
+// that made that claim (rear camera, camera lens cover) carry the correction date.
+const specLeadFixOn = '2026-11-21';
+const specLeadFixed = (model, topic) => Boolean(model.specs) && (topicSpecKeys[topic.slug] || []).filter((key) => key !== 'haptics').length > 0 && !(topicSpecKeys[topic.slug] || []).some((key) => model.specs.some((row) => row.key === key));
 const guideModified = (model, topic) => {
-  const dates = [topic.slug === chargingTopicSlug ? chargingSpecsOn : '', photoFor(model, topic) ? model.photosCheckedOn : '', model.specs ? specsDate(model) : '', model.catalogListings ? model.checkedOn : ''].filter(Boolean);
+  const dates = [specLeadFixed(model, topic) ? specLeadFixOn : '', topic.slug === chargingTopicSlug ? chargingSpecsOn : '', photoFor(model, topic) ? model.photosCheckedOn : '', model.specs ? specsDate(model) : '', model.catalogListings ? model.checkedOn : ''].filter(Boolean);
   return dates.length ? dates.sort().pop() : photoDate(model, topic);
 };
 const hubModified = (model) => [model.specs ? specsDate(model) : '', model.partPhotos?.length ? model.photosCheckedOn : '', model.catalogListings ? model.checkedOn : ''].filter(Boolean).sort().pop();
@@ -619,6 +624,7 @@ const indexTrailRoutes = ['guides', 'models', 'topics', 'parts', 'sources', 'rig
 // 2026-11-13: Motorola-published facts and model-specific Motorola sources on the XT2515, XT2513 and XT2517 model hubs
 // and their 45 guides (models whose records carry specs). Other routes are unchanged.
 const specsAddedOn = '2026-11-13';
+// 2026-11-21: the same facts on the four Edge records (XT2601, XT2507, XT2401-2, XT2307-1) and their 60 guides.
 // 2026-11-17: the same facts on the seven 2024 and 2026 US Moto G records; each spec route is dated by guideModified or
 // hubModified, so routes reached by more than one change carry the newest date.
 const specRoutes = new Map(models.filter((model) => model.specs).flatMap((model) => [[`models/${model.slug}`, hubModified(model)], ...allGuides.filter((guide) => guide.model.slug === model.slug).map((guide) => [`guides/${guide.slug}`, guideModified(model, guide.topic)])]));

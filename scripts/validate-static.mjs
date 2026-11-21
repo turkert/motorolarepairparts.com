@@ -289,7 +289,7 @@ check(publicOg.length <= 200000, `public/og.png is ${publicOg.length} bytes, bud
 
 // Motorola-published facts (2026-11-13): models with specs need a dated official specifications and hardware source,
 // and every guide and hub for them must show the full table, the dated source note and, on guides, the marked rows.
-const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery: ['battery', 'charging'], 'back-cover-rear-housing': ['back', 'ip', 'rear'], 'rear-camera': ['rear'], 'front-camera-sensors': ['front', 'fingerprint'], 'charging-port': ['port', 'charging', 'mics'], 'earpiece-speaker': ['audio'], loudspeaker: ['audio', 'port'], 'microphone-audio-flex': ['mics'], 'vibration-motor': [], 'sim-tray-reader': ['sim'], 'power-volume-buttons': ['fingerprint'], 'fingerprint-sensor': ['fingerprint', 'display'], 'camera-lens-cover': ['rear'], 'display-adhesive-seal': ['ip', 'display'] };
+const specTopicKeys = { 'display-assembly': ['display', 'fingerprint'], battery: ['battery', 'charging'], 'back-cover-rear-housing': ['back', 'ip', 'rear'], 'rear-camera': ['rear'], 'front-camera-sensors': ['front', 'fingerprint'], 'charging-port': ['port', 'charging', 'mics'], 'earpiece-speaker': ['audio'], loudspeaker: ['audio', 'port'], 'microphone-audio-flex': ['mics'], 'vibration-motor': ['haptics'], 'sim-tray-reader': ['sim'], 'power-volume-buttons': ['fingerprint'], 'fingerprint-sensor': ['fingerprint', 'display'], 'camera-lens-cover': ['rear'], 'display-adhesive-seal': ['ip', 'display'] };
 // 2026-11-17: ten records (2024, 2025 and 2026 US Moto G). specsOn dates the facts apart from the catalog check, specsUrl
 // names the specifications page when supportUrl is another page, and the hardware page is optional where none was found.
 // 2026-11-19: the three hero cards on every guide are links: XT code to /xt-code/#lookup, year to the model hub,
@@ -311,11 +311,20 @@ const guideMetaLinksOn = '2026-11-19';
   check(xt.includes('id="lookup"'), 'xt-code: #lookup anchor missing for the guide hero cards');
 }
 const specModels = models.filter((model) => model.specs);
-check(specModels.length === 10, `Expected 10 model records with Motorola-published facts, found ${specModels.length}`);
+// 2026-11-21: the ten US Moto G records must keep their facts; the four Edge records (XT2601, XT2507, XT2401-2,
+// XT2307-1) carry them as a set. Written so the scripts commit also builds on the previous data commit.
+const motoGSpecCodes = ['XT2515', 'XT2513', 'XT2517-1/2/3', 'XT2415', 'XT2413', 'XT2419', 'XT2613', 'XT2615', 'XT2617', 'XT2619'];
+const edgeSpecCodes = ['XT2601', 'XT2507', 'XT2401-2', 'XT2307-1'];
+const edgeWithSpecs = specModels.filter((model) => edgeSpecCodes.includes(model.xtCode));
+check(motoGSpecCodes.every((code) => specModels.some((model) => model.xtCode === code)), 'A US Moto G record lost its Motorola-published facts');
+check(edgeWithSpecs.length === 0 || edgeWithSpecs.length === edgeSpecCodes.length, `Expected all four Edge records with Motorola-published facts, found ${edgeWithSpecs.length}`);
+check(specModels.length === motoGSpecCodes.length + edgeWithSpecs.length, `Unexpected model records with Motorola-published facts: ${specModels.length}`);
 const specsDateOf = (model) => model.specsOn || model.checkedOn;
 const specsUrlOf = (model) => model.specsUrl || model.supportUrl;
 const latest = (...dates) => dates.filter(Boolean).sort().pop();
-const guideDate = (model, topicSlug) => latest(topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
+// 2026-11-21: a guide whose topic keys match none of the model's rows shows no 'Rows marked' lead and carries the correction date.
+const specLeadFixed = (model, topicSlug) => (specTopicKeys[topicSlug] || []).filter((key) => key !== 'haptics').length > 0 && !(specTopicKeys[topicSlug] || []).some((key) => model.specs.some((row) => row.key === key));
+const guideDate = (model, topicSlug) => latest(specLeadFixed(model, topicSlug) ? '2026-11-21' : '', topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
 const escText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 for (const model of specModels) {
   check(specsUrlOf(model) !== sources.motorolaSupport && new URL(specsUrlOf(model)).hostname === 'en-us.support.motorola.com' && /specifications/i.test(model.specsLabel || model.supportLabel || '') && (!model.hardwareUrl || (new URL(model.hardwareUrl).hostname === 'en-us.support.motorola.com' && model.hardwareLabel)), `${model.slug}: specs need a Motorola US specifications page and, if given, a labelled hardware page`);
@@ -333,6 +342,7 @@ for (const model of specModels) {
     const expected = (specTopicKeys[guide.topic.slug] || []).filter((key) => model.specs.some((row) => row.key === key));
     check(rows.length === model.specs.length, `${guide.slug}: spec table has ${rows.length} rows, expected ${model.specs.length}`);
     check(marked === expected.length, `${guide.slug}: ${marked} rows marked for this repair, expected ${expected.length}`);
+    check(html.includes('Rows marked for this repair come first.') === (expected.length > 0), `${guide.slug}: the 'Rows marked' lead does not match the ${expected.length} marked rows`);
     const modified = guideDate(model, guide.topic.slug);
     const review = latest(model.checkedOn || site.verifiedOn, specsDateOf(model));
     check(html.includes(`href="${specsUrlOf(model)}"`) && (!model.hardwareUrl || html.includes(model.hardwareUrl)) && html.includes(`Source review ${review}`) && html.includes(`"dateModified":"${modified}"`), `${guide.slug}: missing Motorola source, ${review} review date or ${modified} dateModified`);
