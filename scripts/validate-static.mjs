@@ -355,7 +355,11 @@ for (const model of specModels) {
 // title, an item number and a known topic (or 'other'); each guide shows its own titles, or the dated "no listing" line;
 // the hub shows one row per guide with the right count, the listings not covered by a guide, and the note once.
 const catalogModels = models.filter((model) => model.catalogListings);
-check(catalogModels.length === 3 && ['XT2415', 'XT2413', 'XT2419'].every((code) => catalogModels.some((model) => model.xtCode === code)), `Expected catalog listings for XT2415, XT2413 and XT2419, found ${catalogModels.map((model) => model.xtCode).join(', ')}`);
+// 2026-11-22: the four Edge records (XT2601, XT2507, XT2401-2, XT2307-1) carry catalog listings as a set (all or none).
+const catalogBase = ['XT2415', 'XT2413', 'XT2419'];
+const catalogEdge = ['XT2601', 'XT2507', 'XT2401-2', 'XT2307-1'];
+const catalogEdgeCount = catalogEdge.filter((code) => catalogModels.some((model) => model.xtCode === code)).length;
+check(catalogBase.every((code) => catalogModels.some((model) => model.xtCode === code)) && (catalogEdgeCount === 0 || catalogEdgeCount === catalogEdge.length) && catalogModels.every((model) => [...catalogBase, ...catalogEdge].includes(model.xtCode)), `Expected catalog listings for ${catalogBase.join(', ')} and all or none of ${catalogEdge.join(', ')}, found ${catalogModels.map((model) => model.xtCode).join(', ')}`);
 for (const model of catalogModels) {
   check(/^\d{4}-\d{2}-\d{2}$/.test(model.checkedOn || '') && model.checkedOn !== site.verifiedOn && model.catalogNote && !/[\u2013\u2014]/.test(model.catalogNote), `${model.slug}: catalog listings need a new checkedOn date and a note without dashes`);
   check(model.catalogListings.length > 0 && model.catalogListings.every((item) => item.title && /^\d{6,12}$/.test(item.item) && !/[\u2013\u2014]/.test(item.title) && (item.topic === 'other' || topics.some((topic) => topic.slug === item.topic))) && new Set(model.catalogListings.map((item) => item.item)).size === model.catalogListings.length, `${model.slug}: catalog listings need unique item numbers, titles and known topics`);
