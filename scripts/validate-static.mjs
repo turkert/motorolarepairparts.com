@@ -433,6 +433,12 @@ for (const file of htmlFiles) {
   const hub = await readFile(join(outputDir, 'topics', 'charging-port', 'index.html'), 'utf8');
   const rows = hub.split('<tr data-charging-row>').slice(1);
   check(rows.length === chargingSpecs.length && chargingSpecs.length >= 10, `charging-port: expected ${chargingSpecs.length} charging rows, found ${rows.length}`);
+  // 2026-11-23: the four Edge records are in the table as a set (all or none), and every record that also carries Motorola
+  // facts agrees with them on the wired wattage (a row may be opened later than the facts only when they still agree).
+  const edgeCodes = ['XT2601', 'XT2507', 'XT2401-2', 'XT2307-1'];
+  const edgeIn = edgeCodes.filter((code) => chargingSpecs.some((row) => row.xtCode === code));
+  check(edgeIn.length === 0 || edgeIn.length === edgeCodes.length, `chargingSpecs: Edge records must be added as a set, found ${edgeIn.join(', ')}`);
+  check(hub.includes('<h2>Charging specs by model</h2>') && !/Moto G models? in the/.test(hub), 'charging-port: heading or intro still limited to Moto G');
   check(new Set(chargingSpecs.map((row) => row.xtCode)).size === chargingSpecs.length, 'chargingSpecs: duplicate XT code');
   chargingSpecs.forEach((record, index) => {
     const model = models.find((item) => item.xtCode === record.xtCode);
@@ -441,7 +447,13 @@ for (const file of htmlFiles) {
     check(/^\d{4}-\d{2}-\d{2}$/.test(record.checkedOn) && record.checkedOn <= chargingSpecsOn && record.sources?.length && record.sources.every((source) => new URL(source.url).hostname === 'en-us.support.motorola.com' && source.label), `chargingSpecs: ${record.xtCode} needs a date and Motorola US support sources`);
     const row = rows[index] || '';
     check(model && row.includes(`${escText(model.shortName)}</a><small>${escText(model.xtCode)}</small>`) && ['port', 'wired', 'wireless', 'jack', 'water'].every((key) => row.includes(`<td>${escText(record[key])}</td>`)) && record.sources.every((source) => row.includes(source.url)) && row.includes(`Opened ${record.checkedOn}`), `charging-port: row ${record.xtCode} does not match its record`);
-    if (model?.specs) check(record.sources.some((source) => source.url.split('/~/')[0] === specsUrlOf(model).split('/~/')[0]) && record.checkedOn <= specsDateOf(model), `chargingSpecs: ${record.xtCode} should cite the model's specifications page, opened no later than its facts`);
+    if (model?.specs) {
+      const charging = model.specs.find((spec) => spec.key === 'charging')?.value || '';
+      const wired = (record.wired.match(/^\d+W/) || [''])[0];
+      const agrees = Boolean(wired) && charging.replace(/ W\b/g, 'W').includes(wired);
+      check(record.sources.some((source) => source.url.split('/~/')[0] === specsUrlOf(model).split('/~/')[0]) && (record.checkedOn <= specsDateOf(model) || agrees), `chargingSpecs: ${record.xtCode} should cite the model's specifications page, opened no later than its facts unless the wired rate agrees`);
+      check(agrees, `chargingSpecs: ${record.xtCode} wired rate ${wired} does not appear in the model's charging fact`);
+    }
   });
   check(hub.includes('id="charging-specs"') && hub.includes(`Charging specs updated ${chargingSpecsOn}`) && hub.includes(`"dateModified":"${chargingSpecsOn}"`) && hub.includes('<title>Motorola charging port specs and repair guides by model</title>'), 'charging-port: hub lacks the table anchor, dated eyebrow, CollectionPage date or title');
   check(sitemap.includes(`<loc>${site.origin}/topics/charging-port/</loc><lastmod>${chargingSpecsOn}</lastmod>`), 'charging-port: hub lastmod is not the charging specs date');
