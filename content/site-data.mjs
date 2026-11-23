@@ -33,7 +33,10 @@ export const sourceRecords = [
 // copied from the Motorola US support pages listed in its sources, opened on the row's checkedOn date (the three 2025
 // records reuse the pages opened 2026-11-13). Values are as Motorola lists them; "Not listed" means the page names no such
 // feature. The moto g 2026 and moto g stylus 2026 specifications pages on the US support site are published in French.
-export const chargingSpecsOn = '2026-11-16';
+// 2026-11-23: the four Motorola Edge records (XT2601, XT2507, XT2401-2, XT2307-1) join the table, each from its Motorola US
+// specifications page reopened 2026-11-23 (the Edge 40 Neo page is in French). The Edge 50 Ultra page lists no wireless
+// charging and leaves its IP Rating row blank; the Edge 40 Neo page lists no wireless charging and no headset jack.
+export const chargingSpecsOn = '2026-11-23';
 export const chargingSpecs = [
   { xtCode: 'XT2613', port: 'USB Type-C (USB 2.0)', wired: '30W', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'Splash-resistant design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189798', label: 'Specifications, moto g 2026 (French)' }, { url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189556', label: 'About your hardware, moto g 2026' }] },
   { xtCode: 'XT2615', port: 'USB Type-C (USB 2.0)', wired: '18W', wireless: 'Not listed', jack: 'No 3.5 mm jack; headphones use USB Type-C', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189848', label: 'Specifications, moto g play 2026' }] },
@@ -45,6 +48,10 @@ export const chargingSpecs = [
   { xtCode: 'XT2415', port: 'USB Type-C (USB 2.0)', wired: '30W (Motorola notes a 10W or 20W charger for certain carriers)', wireless: '15W', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/178714/~/specifications---moto-g-power-5g---2024', label: 'Specifications, moto g power 5G 2024' }] },
   { xtCode: 'XT2413', port: 'USB Type-C (USB 2.0)', wired: '15W', wireless: 'Not listed', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/177738/~/specifications--moto-g-play-(2024)', label: 'Specifications, moto g play 2024' }] },
   { xtCode: 'XT2419', port: 'USB Type-C (USB 2.0)', wired: '30W TurboPower', wireless: '15W', jack: '3.5 mm headset jack', water: 'Water-repellent design', checkedOn: '2026-11-16', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/181506/~/specifications---moto-g-stylus-5g---2024', label: 'Specifications, moto g stylus 5G 2024' }] },
+  { xtCode: 'XT2601', port: 'USB Type-C (USB 2.0)', wired: '68W', wireless: '15W', jack: 'No 3.5 mm jack; headphones use USB Type-C', water: 'IP68 and IP69', checkedOn: '2026-11-23', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/189842/~/specifications---motorola-edge-70', label: 'Specifications, motorola edge 70' }] },
+  { xtCode: 'XT2507', port: 'USB Type-C (USB 2.0)', wired: '90W TurboPower (needs a Motorola TurboPower charger)', wireless: '15W', jack: 'No 3.5 mm jack; headphones use USB Type-C', water: 'IP68 and IP69', checkedOn: '2026-11-23', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/185971/~/specifications---motorola-edge-60-pro', label: 'Specifications, motorola edge 60 pro' }] },
+  { xtCode: 'XT2401-2', port: 'USB Type-C (USB 3.1 Gen 2), DisplayPort 1.4', wired: '125W TurboPower', wireless: 'Not listed', jack: 'No 3.5 mm jack; headphones use USB Type-C', water: 'Not listed (the IP Rating row is blank)', checkedOn: '2026-11-23', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/187368/~/specifications---motorola-edge-50-ultra', label: 'Specifications, motorola edge 50 ultra' }] },
+  { xtCode: 'XT2307-1', port: 'USB Type-C (USB 2.0)', wired: '68W TurboPower', wireless: 'Not listed', jack: 'No headset jack', water: 'IP68', checkedOn: '2026-11-23', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/176257', label: 'Specifications, motorola edge 40 neo (French)' }] },
 ];
 
 const supportUrl = sources.motorolaSupport;
