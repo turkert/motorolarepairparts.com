@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, chargingSpecs, chargingSpecsOn, models, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics, vibrationChecksOn, vibrationModelChecks, vibrationSources } from '../content/site-data.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(projectRoot, 'dist-static');
@@ -324,7 +324,7 @@ const specsUrlOf = (model) => model.specsUrl || model.supportUrl;
 const latest = (...dates) => dates.filter(Boolean).sort().pop();
 // 2026-11-21: a guide whose topic keys match none of the model's rows shows no 'Rows marked' lead and carries the correction date.
 const specLeadFixed = (model, topicSlug) => (specTopicKeys[topicSlug] || []).filter((key) => key !== 'haptics').length > 0 && !(specTopicKeys[topicSlug] || []).some((key) => model.specs.some((row) => row.key === key));
-const guideDate = (model, topicSlug) => latest(specLeadFixed(model, topicSlug) ? '2026-11-21' : '', topicSlug === 'charging-port' ? chargingSpecsOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
+const guideDate = (model, topicSlug) => latest(specLeadFixed(model, topicSlug) ? '2026-11-21' : '', topicSlug === 'charging-port' ? chargingSpecsOn : '', topicSlug === 'vibration-motor' ? vibrationChecksOn : '', model.partPhotos?.some((photo) => photo.topic === topicSlug) ? model.photosCheckedOn : '', specsDateOf(model), model.catalogListings ? model.checkedOn : '');
 const escText = (value) => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 for (const model of specModels) {
   check(specsUrlOf(model) !== sources.motorolaSupport && new URL(specsUrlOf(model)).hostname === 'en-us.support.motorola.com' && /specifications/i.test(model.specsLabel || model.supportLabel || '') && (!model.hardwareUrl || (new URL(model.hardwareUrl).hostname === 'en-us.support.motorola.com' && model.hardwareLabel)), `${model.slug}: specs need a Motorola US specifications page and, if given, a labelled hardware page`);
@@ -467,6 +467,41 @@ for (const file of htmlFiles) {
     const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
     check(!html.includes('data-charging-row'), `${topic.slug}: shows the charging table`);
   }
+}
+
+// 2026-11-24: Motorola vibration checks on the vibration motor hub. Each model check is tied to a model record and cites
+// help.motorola.com pages opened on vibrationChecksOn; the hub shows one row per record, the five steps, the dated
+// troubleshooter source and the bench-reading label; guides for those records show the model's checks and sources;
+// every other vibration motor guide links to the hub section; no other page carries them; lastmod and dateModified.
+{
+  const hub = await readFile(join(outputDir, 'topics', 'vibration-motor', 'index.html'), 'utf8');
+  const rows = hub.split('<tr data-vibration-row>').slice(1);
+  check(/^\d{4}-\d{2}-\d{2}$/.test(vibrationChecksOn) && new URL(vibrationSources.troubleshooter.url).hostname === 'en-us.support.motorola.com', 'vibration: needs a check date and a Motorola US troubleshooter source');
+  check(rows.length === vibrationModelChecks.length && vibrationModelChecks.length >= 1 && new Set(vibrationModelChecks.map((row) => row.xtCode)).size === vibrationModelChecks.length, `vibration: expected ${vibrationModelChecks.length} unique hub rows, found ${rows.length}`);
+  check(hub.includes('id="vibration-checks"') && (hub.match(/<li><span>\d<\/span>/g) || []).length === 5 && hub.includes(vibrationSources.troubleshooter.url) && hub.includes(`all opened ${vibrationChecksOn}`) && hub.includes('Our bench reading, not a Motorola statement') && hub.includes(`"dateModified":"${vibrationChecksOn}"`) && hub.includes(`Motorola checks added ${vibrationChecksOn}`) && hub.includes('href="#vibration-checks"'), 'vibration: hub lacks the section, its steps, dated sources, label or dateModified');
+  check(sitemap.includes(`<loc>${site.origin}/topics/vibration-motor/</loc><lastmod>${vibrationChecksOn}</lastmod>`), 'vibration: hub lastmod is not the checks date');
+  vibrationModelChecks.forEach((record, index) => {
+    const model = models.find((item) => item.xtCode === record.xtCode);
+    check(Boolean(model), `vibration: ${record.xtCode} has no model record`);
+    check(record.sources.length >= 2 && record.sources.every((source) => new URL(source.url).hostname === 'help.motorola.com' && source.label.startsWith('Motorola help, ')) && ['helpName', 'software', 'master', 'perType'].every((key) => record[key] && !/[–—]/.test(record[key])), `vibration: ${record.xtCode} needs help.motorola.com sources and every value, without dashes`);
+    check(Boolean(model) && rows[index]?.includes(`${escText(model.shortName)}</a><small>${escText(model.xtCode)}</small>`) && record.sources.every((source) => rows[index].includes(source.url)) && rows[index].includes(`<td>${escText(record.master)}</td>`), `vibration: hub row ${index + 1} does not match ${record.xtCode}`);
+  });
+  for (const guide of allGuides) {
+    const html = await readFile(join(outputDir, 'guides', guide.slug, 'index.html'), 'utf8');
+    const record = vibrationModelChecks.find((item) => item.xtCode === guide.model.xtCode);
+    if (guide.topic.slug !== 'vibration-motor') {
+      check(!html.includes('data-vibration-checks') && !html.includes('data-vibration-link'), `${guide.slug}: carries vibration checks outside the vibration topic`);
+      continue;
+    }
+    const due = guide.model.specs ? guideDate(guide.model, 'vibration-motor') : vibrationChecksOn;
+    check((html.match(/data-vibration-link/g) || []).length === 1 && html.includes('href="/topics/vibration-motor/#vibration-checks"') && html.includes(`"dateModified":"${due}"`) && sitemap.includes(`<loc>${site.origin}/guides/${guide.slug}/</loc><lastmod>${due}</lastmod>`), `${guide.slug}: missing vibration checks link, dateModified or lastmod ${due}`);
+    check(html.includes('data-vibration-checks') === Boolean(record) && (!record || record.sources.every((source) => (html.split(source.url).length - 1) >= 3) && html.includes(`opened ${vibrationChecksOn}`)), `${guide.slug}: model vibration checks or their sources do not match the record`);
+  }
+  for (const topic of topics.filter((item) => item.slug !== 'vibration-motor')) {
+    const html = await readFile(join(outputDir, 'topics', topic.slug, 'index.html'), 'utf8');
+    check(!html.includes('data-vibration-row') && !html.includes('id="vibration-checks"'), `${topic.slug}: shows the vibration checks`);
+  }
+  check(llms.includes('#vibration-checks'), 'llms.txt: no vibration checks line');
 }
 
 // 2026-11-20: /razr-screens/. Five Razr records with their Motorola specifications page, every Parts4Cells Razr listing
