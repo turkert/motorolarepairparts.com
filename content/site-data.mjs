@@ -54,6 +54,35 @@ export const chargingSpecs = [
   { xtCode: 'XT2307-1', port: 'USB Type-C (USB 2.0)', wired: '68W TurboPower', wireless: 'Not listed', jack: 'No headset jack', water: 'IP68', checkedOn: '2026-11-23', sources: [{ url: 'https://en-us.support.motorola.com/app/answers/detail/a_id/176257', label: 'Specifications, motorola edge 40 neo (French)' }] },
 ];
 
+// 2026-11-24: Motorola's own vibration checks, from Motorola pages opened 2026-11-24, for the vibration motor topic hub
+// (#vibration-checks). The Edge 40 Neo (top guide in Clarity for two weeks, no vibration motor listed on 2026-11-22) and
+// the Moto G 5G 2025 have model help pages for Android 15, so their vibration guides show the model's own checks; every
+// other vibration motor guide links to the hub section. Menu names are as each page shows them and differ by software.
+export const vibrationChecksOn = '2026-11-24';
+export const vibrationSources = {
+  troubleshooter: { url: 'https://en-us.support.motorola.com/app/mcp/troubleshooter_page/g_id/7726', label: 'Motorola Support US troubleshooter, Vibrate issues, step 1: Check the basics' },
+};
+export const vibrationModelChecks = [
+  {
+    xtCode: 'XT2307-1', helpName: 'motorola edge 40 neo', software: 'Android 15',
+    sources: [
+      { url: 'https://help.motorola.com/hc/7144/15/global/en-us/CG0280262453.html', label: 'Motorola help, Change vibration settings (Android 15), motorola edge 40 neo' },
+      { url: 'https://help.motorola.com/hc/7144/15/global/en-us/CGT1410105705.html', label: 'Motorola help, Silence calls & notifications (Android 15), motorola edge 40 neo' },
+    ],
+    master: 'Settings > Sound & vibration > Vibration & haptics, then Use vibration & haptics',
+    perType: 'Under Calls, Ring vibration; the Notification vibration slider; under Notifications and alarms, the Alarm vibration slider (all the way left turns vibration off for every alarm)',
+  },
+  {
+    xtCode: 'XT2513', helpName: 'moto g 2025', software: 'Android 15',
+    sources: [
+      { url: 'https://help.motorola.com/hc/3590/15/na/en-us/CG0280262453.html', label: 'Motorola help, Change vibration settings (Android 15), moto g 2025' },
+      { url: 'https://help.motorola.com/hc/3590/15/na/en-us/CGT1410105705.html', label: 'Motorola help, Silence calls & notifications (Android 15), moto g 2025' },
+    ],
+    master: 'Settings > Sound & vibration > Vibration & haptics, then Use vibration & haptics',
+    perType: 'Under Calls, Ring vibration; under Notifications and alarms, the Notification vibration and Alarm vibration switches (Alarm vibration off turns vibration off for every alarm)',
+  },
+];
+
 const supportUrl = sources.motorolaSupport;
 
 export const models = [
