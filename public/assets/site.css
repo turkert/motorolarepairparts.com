@@ -435,3 +435,11 @@ footer strong { font-size: 20px; } footer p { margin: 8px 0 0; color: var(--mute
 .razr-listings li + li { margin-top: 8px; }
 .razr-table td:nth-child(3), .razr-table td:nth-child(4) { min-width: 210px; }
 .razr-note { margin: 0 0 28px; }
+/* 2026-11-24: Motorola vibration checks on the vibration motor hub. */
+.vibration-checks { margin: 0 0 56px; }
+.vibration-checks > p { max-width: 760px; }
+.vibration-checks .step-list, .vibration-checks .xt-table-wrap { margin-top: 18px; }
+.vibration-table th, .vibration-table td { white-space: normal; vertical-align: top; min-width: 120px; line-height: 1.45; }
+.vibration-table tbody th { min-width: 150px; }
+.vibration-table td:nth-child(3), .vibration-table td:nth-child(4) { min-width: 220px; }
+.vibration-table small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; font-weight: 560; }
