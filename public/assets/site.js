@@ -29,21 +29,43 @@
   if (!(modelFilter instanceof HTMLSelectElement) || !(topicFilter instanceof HTMLSelectElement)) return;
 
   const normalize = (value) => value.trim().toLocaleLowerCase('en-US');
+  // 2026-11-26: the library is grouped by model; a group (and its jump link) hides when none of its guides match.
+  // Every word of the query must appear, so "display xt2515" and "xt2515 display" both work.
+  const groups = [...document.querySelectorAll('[data-model-group]')];
+  const jumps = [...document.querySelectorAll('[data-jump]')];
+  // A guide's search text is its model group's text (name, XT code) plus its own topic text.
+  const groupOf = (card) => card.closest('[data-model-group]');
+  const modelOf = (card) => card.getAttribute('data-model') || groupOf(card)?.getAttribute('data-model-group') || '';
+  const searchText = new Map(cards.map((card) => [card, `${groupOf(card)?.getAttribute('data-search') || ''} ${card.getAttribute('data-search') || ''}`]));
+  const cardModel = new Map(cards.map((card) => [card, modelOf(card)]));
 
   const update = () => {
     const query = normalize(search.value);
+    const words = query.split(/\s+/).filter(Boolean);
     const model = modelFilter.value;
     const topic = topicFilter.value;
     let visible = 0;
+    const shown = new Set();
 
     for (const card of cards) {
-      const searchable = card.getAttribute('data-search') || '';
-      const matchesQuery = !query || searchable.includes(query);
-      const matchesModel = !model || card.getAttribute('data-model') === model;
+      const searchable = searchText.get(card);
+      const matchesQuery = words.every((word) => searchable.includes(word));
+      const matchesModel = !model || cardModel.get(card) === model;
       const matchesTopic = !topic || card.getAttribute('data-topic') === topic;
       const matches = matchesQuery && matchesModel && matchesTopic;
-      card.hidden = !matches;
-      if (matches) visible += 1;
+      if (card.hidden === matches) card.hidden = !matches;
+      if (matches) {
+        visible += 1;
+        shown.add(cardModel.get(card));
+      }
+    }
+    for (const group of groups) {
+      const hide = !shown.has(group.getAttribute('data-model-group'));
+      if (group.hidden !== hide) group.hidden = hide;
+    }
+    for (const jump of jumps) {
+      const hide = !shown.has(jump.getAttribute('data-jump'));
+      if (jump.hidden !== hide) jump.hidden = hide;
     }
 
     if (count) {
