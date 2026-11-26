@@ -322,7 +322,8 @@ function guideIndexPage() {
   return `${head({ title: 'Repair Guide Library', description, route: 'guides', schema: indexTrail('Guides', 'guides').schema })}${header()}<main id="main" class="page-shell">${indexTrail('Guides', 'guides').html}
   <section class="page-hero"><p class="eyebrow">${allGuides.length} repair guides</p><h1>Find the exact XT code and component.</h1><p>${description} Each page is a diagnosis, sourcing, and verification brief. It is not a disassembly procedure or a substitute for trained judgment. Not sure of the code? <a class="inline-link" href="/xt-code/">Find the model number in Settings</a>.</p></section>
   <section class="filter-panel" aria-label="Guide filters"><label for="guide-search">Search model, XT code, or repair topic</label><input id="guide-search" type="search" placeholder="Try XT2515 display" autocomplete="off"><div class="filter-row"><select id="model-filter" aria-label="Filter by model"><option value="">All models</option>${modelsByRecency.map((model) => `<option value="${model.slug}">${esc(model.shortName)}</option>`).join('')}</select><select id="topic-filter" aria-label="Filter by repair topic"><option value="">All repair topics</option>${topics.map((topic) => `<option value="${topic.slug}">${esc(topic.name)}</option>`).join('')}</select><button id="clear-filters" type="button">Clear</button></div><p id="guide-count" aria-live="polite">Showing all ${allGuides.length} guides</p></section>
-  <section class="library-grid" id="guide-library">${allGuides.map((guide) => `<article class="library-card" data-guide-card data-model="${guide.model.slug}" data-topic="${guide.topic.slug}" data-search="${esc(`${guide.model.name} ${guide.model.xtCode} ${guide.topic.name} ${guide.topic.partLabel}`.toLowerCase())}"><span>Guide ${String(guide.id).padStart(3, '0')}</span><h2>${esc(guide.model.shortName)} ${esc(guide.topic.name)}</h2><p>${esc(guide.topic.summary)}</p><a href="/guides/${guide.slug}/">Open repair guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section>
+  <nav class="library-jump" aria-label="Jump to a model"><span>Jump to a model</span>${modelsByRecency.map((model) => `<a href="#${model.slug}" data-jump="${model.slug}" title="${esc(model.shortName)}">${esc(model.xtCode)}</a>`).join('')}</nav>
+  <div class="library-groups" id="guide-library">${modelsByRecency.map((model) => `<section class="library-model" id="${model.slug}" data-model-group="${model.slug}" data-search="${esc(`${model.name} ${model.xtCode}`.toLowerCase())}" aria-labelledby="${model.slug}-title"><header><div><p>${model.year} · ${esc(model.xtCode)} · ${esc(model.family)}</p><h2 id="${model.slug}-title">${esc(model.shortName)}</h2></div><a class="inline-link" href="/models/${model.slug}/">Model hub</a></header><ul class="guide-links">${allGuides.filter((guide) => guide.model.slug === model.slug).map((guide) => `<li data-guide-card data-topic="${guide.topic.slug}" data-search="${esc(`${guide.topic.name} ${guide.topic.partLabel}`.toLowerCase())}"><a href="/guides/${guide.slug}/"><span class="visually-hidden">${esc(guide.model.shortName)} </span>${esc(guide.topic.name)}</a></li>`).join('')}</ul></section>`).join('')}</div>
   <p class="empty-state" id="empty-state" hidden>No guides match those filters. Try a broader model, XT code, or topic.</p>
 </main>${footer()}`;
 }
@@ -650,6 +651,8 @@ const xtLinksAddedOn = '2026-11-09';
 // 2026-11-10: visible breadcrumbs and BreadcrumbList on the index and reference pages (guides, models, topics, parts,
 // sources, right-to-repair, privacy). Other routes are unchanged.
 const indexTrailsAddedOn = '2026-11-10';
+// 2026-11-26: /guides/ library grouped by model (one section per XT record, compact topic links) instead of 360 tall cards.
+const guideLibraryGroupedOn = '2026-11-26';
 const indexTrailRoutes = ['guides', 'models', 'topics', 'parts', 'sources', 'right-to-repair', 'privacy'];
 // 2026-11-13: Motorola-published facts and model-specific Motorola sources on the XT2515, XT2513 and XT2517 model hubs
 // and their 45 guides (models whose records carry specs). Other routes are unchanged.
@@ -672,6 +675,7 @@ const lastmodFor = (route) => {
 // 2026-11-20: new /razr-screens/ page; links to it added on /models/, /parts/, /xt-code/ and the display assembly hub.
 const razrLinkRoutes = [razrRoute, 'models', 'parts', 'xt-code', 'topics/display-assembly'];
 const baseLastmod = (route) => {
+  if (route === 'guides') return guideLibraryGroupedOn;
   if (razrLinkRoutes.includes(route)) return razrScreensOn;
   if (specRoutes.has(route)) return specRoutes.get(route);
   if (chargingRoutes.has(route)) return chargingSpecsOn;

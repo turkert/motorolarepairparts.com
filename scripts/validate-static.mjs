@@ -535,6 +535,23 @@ for (const file of htmlFiles) {
   check(llms.includes(`${site.origin}/razr-screens/`), 'llms.txt: missing /razr-screens/');
 }
 
+// Guide library grouped by model (2026-11-26): one section per model record with its 15 guide links, a jump link per
+// record, every guide linked exactly once, no 360-card grid, a page weight budget and the new lastmod.
+{
+  const library = await readFile(join(outputDir, 'guides', 'index.html'), 'utf8');
+  const groupIds = captures(library, /<section class="library-model" id="([^"]+)" data-model-group="\1"/g);
+  check(groupIds.length === M && new Set(groupIds).size === M && models.every((model) => groupIds.includes(model.slug)), `guides: expected ${M} model groups, found ${groupIds.length}`);
+  check(captures(library, /data-jump="([^"]+)"/g).sort().join() === [...groupIds].sort().join(), 'guides: jump links do not match the model groups');
+  check((library.match(/<li data-guide-card /g) || []).length === G, `guides: expected ${G} guide links`);
+  for (const guide of allGuides) {
+    const section = library.split(`id="${guide.model.slug}" data-model-group=`)[1]?.split('</section>')[0] || '';
+    check(section.includes(`href="/guides/${guide.slug}/"`) && library.split(`href="/guides/${guide.slug}/"`).length === 2, `guides: ${guide.slug} missing from its model group or linked twice`);
+  }
+  check(!library.includes('class="library-card"'), 'guides: the old 360-card grid is back');
+  check(Buffer.byteLength(library) < 130000, `guides: page is ${Buffer.byteLength(library)} bytes, budget 130000`);
+  check(sitemap.includes(`<loc>${site.origin}/guides/</loc><lastmod>2026-11-26</lastmod>`), 'guides: lastmod is not 2026-11-26');
+}
+
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
 check(manifest.publicDeployment === true, 'Build manifest does not record the authorized public deployment');
 check(manifest.htmlPages === H && manifest.sitemapUrls === H - 1, 'Build manifest counts are incorrect');
