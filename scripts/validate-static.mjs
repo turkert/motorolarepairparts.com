@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, chargingSpecs, chargingSpecsOn, models, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics, vibrationChecksOn, vibrationModelChecks, vibrationSources } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, priceAllNewUrl, priceCheckOn, priceListings, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics, vibrationChecksOn, vibrationModelChecks, vibrationSources } from '../content/site-data.mjs';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(projectRoot, 'dist-static');
@@ -73,7 +73,7 @@ function pngDimensions(buffer) {
 // Expected counts follow the model records (20 originals; 24 since 2026-11-07 with four 2026 Moto G models).
 const M = models.length;
 const G = M * topics.length;
-const H = G + M + topics.length + 11; // 11 = home, 6 index/reference pages, privacy, xt-code (2026-11-09), razr-screens (2026-11-20), 404
+const H = G + M + topics.length + 12; // 12 = home, 6 index/reference pages, privacy, xt-code (2026-11-09), razr-screens (2026-11-20), motorola-parts-prices (2026-11-27), 404
 check(M >= 20, `Source data contains ${M} models, expected at least 20`);
 check(allGuides.length === G, `Source data contains ${allGuides.length} guides, expected ${G}`);
 check(topics.length === 15, `Source data contains ${topics.length} topics, expected 15`);
@@ -264,7 +264,8 @@ for (const guide of allGuides) check(sitemapUrls.includes(`${site.origin}/guides
 const llms = await readFile(join(outputDir, 'llms.txt'), 'utf8');
 check(llms.startsWith('# Motorola Repair Parts') && llms.includes(`${site.origin}/guides/`) && llms.includes(`${site.origin}/xt-code/`), 'llms.txt is missing or incomplete');
 check(sitemapUrls.includes(`${site.origin}/xt-code/`), 'Sitemap is missing /xt-code/');
-for (const route of ['', 'sources/']) check(sitemap.includes(`<loc>${site.origin}/${route}</loc><lastmod>${sourcesCheckedOn}</lastmod>`), `Sitemap lastmod for /${route} is not ${sourcesCheckedOn}`);
+// The homepage lastmod moved to priceCheckOn on 2026-11-27 (link to /motorola-parts-prices/); checked in that block.
+for (const route of ['sources/']) check(sitemap.includes(`<loc>${site.origin}/${route}</loc><lastmod>${sourcesCheckedOn}</lastmod>`), `Sitemap lastmod for /${route} is not ${sourcesCheckedOn}`);
 for (const icon of ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png']) check(await exists(join(outputDir, icon)), `${icon} is missing`);
 const robots = await readFile(join(outputDir, 'robots.txt'), 'utf8');
 check(robots.includes('User-agent: *\nAllow: /'), 'robots.txt does not allow crawling');
@@ -530,7 +531,9 @@ for (const file of htmlFiles) {
   check(!/[–—]/.test(page), 'razr-screens: contains an en or em dash');
   for (const route of ['models', 'parts', 'xt-code', 'topics/display-assembly']) {
     check((await readFile(join(outputDir, route, 'index.html'), 'utf8')).includes('href="/razr-screens/"'), `${route}: missing link to /razr-screens/`);
-    check(sitemap.includes(`<loc>${site.origin}/${route}/</loc><lastmod>${razrScreensOn}</lastmod>`), `${route}: lastmod is not ${razrScreensOn}`);
+    // parts and the display assembly hub moved to priceCheckOn on 2026-11-27 (links to /motorola-parts-prices/).
+    const expected = ['parts', 'topics/display-assembly'].includes(route) ? priceCheckOn : razrScreensOn;
+    check(sitemap.includes(`<loc>${site.origin}/${route}/</loc><lastmod>${expected}</lastmod>`), `${route}: lastmod is not ${expected}`);
   }
   check(llms.includes(`${site.origin}/razr-screens/`), 'llms.txt: missing /razr-screens/');
 }
@@ -555,6 +558,39 @@ for (const file of htmlFiles) {
 const manifest = JSON.parse(await readFile(join(outputDir, 'build-manifest.json'), 'utf8'));
 check(manifest.publicDeployment === true, 'Build manifest does not record the authorized public deployment');
 check(manifest.htmlPages === H && manifest.sitemapUrls === H - 1, 'Build manifest counts are incorrect');
+
+// Motorola parts prices by XT code (2026-11-27): listing data shape, every model record and Razr listing priced, the
+// tables and figures built from the data, at most two Parts4Cells links, dates, links in and llms.txt.
+{
+  const route = 'motorola-parts-prices';
+  const screenParts = ['screen', 'screen-frame'];
+  check(/^\d{4}-\d{2}-\d{2}$/.test(priceCheckOn), 'prices: priceCheckOn is not a date');
+  check(new Set(priceListings.map((listing) => listing.item)).size === priceListings.length, 'prices: item numbers are not unique');
+  check(priceListings.every((listing) => /^\d{6,12}$/.test(listing.item) && Number.isFinite(listing.price) && listing.price > 0 && (listing.was === undefined || listing.was > listing.price) && typeof listing.inStock === 'boolean' && listing.records.length && listing.title), 'prices: a listing lacks item, price, stock state, records or title, or its was price is not higher');
+  const codes = new Set([...models.map((model) => model.xtCode), 'RAZR']);
+  check(priceListings.every((listing) => listing.records.every((code) => codes.has(code))), 'prices: a listing names an unknown record');
+  check(models.every((model) => priceListings.some((listing) => screenParts.includes(listing.part) && listing.records.includes(model.xtCode))), 'prices: a model record has no screen listing');
+  check(razrListings.every((item) => priceListings.some((listing) => listing.item === item.item && listing.records.includes('RAZR') && listing.part === `screen-${item.screen}`)), 'prices: a Razr screen listing has no price');
+  check(priceListings.filter((listing) => screenParts.includes(listing.part)).every((listing) => /with touch/i.test(listing.title) && (listing.part === 'screen-frame') === /frame/i.test(listing.title)), 'prices: a screen listing is classed with or without frame against its title');
+  for (const [item, price] of [['308464', 47], ['308465', 37], ['210000023774', 40], ['210000023773', 21], ['210000025797', 9.5]]) check(priceListings.some((listing) => listing.item === item && listing.price === price && listing.inStock), `prices: the page names item ${item} at ${price} in stock`);
+  const page = await readFile(join(outputDir, route, 'index.html'), 'utf8');
+  checkBreadcrumbs(page, route, ['Home', 'Parts', 'Prices']);
+  check((page.match(/<h1[\s>]/g) || []).length === 1, 'prices: expected one H1');
+  check((page.match(/data-price-row=/g) || []).length === models.length, 'prices: expected one row per model record');
+  check((page.match(/data-price-group/g) || []).length === 7 && (page.match(/data-price-part=/g) || []).length === 8, 'prices: expected 7 series rows and 8 part rows');
+  for (const model of models) check(page.includes(`href="/models/${model.slug}/"`), `prices: missing model hub link for ${model.xtCode}`);
+  const p4c = page.match(/href="https:\/\/parts4cells\.com[^"]*"/g) || [];
+  check(p4c.length <= 2 && page.includes(`href="${priceAllNewUrl}"`) && page.includes(`href="${sources.parts4cellsMotorola}"`), 'prices: more than two Parts4Cells links or a required one is missing');
+  check(!page.includes('$30.00'), 'prices: a placeholder $30.00 price is shown');
+  check(page.includes(`"dateModified":"${priceCheckOn}"`) && sitemap.includes(`<loc>${site.origin}/${route}/</loc><lastmod>${priceCheckOn}</lastmod>`), 'prices: dateModified or lastmod is wrong');
+  check(!/[–—]/.test(page), 'prices: contains an en or em dash');
+  for (const linking of ['', 'parts', 'topics/display-assembly']) {
+    const html = await readFile(linking ? join(outputDir, linking, 'index.html') : join(outputDir, 'index.html'), 'utf8');
+    check(html.includes(`href="/${route}/"`), `${linking || 'home'}: missing link to /${route}/`);
+    check(sitemap.includes(`<loc>${site.origin}/${linking ? `${linking}/` : ''}</loc><lastmod>${priceCheckOn}</lastmod>`), `${linking || 'home'}: lastmod is not ${priceCheckOn}`);
+  }
+  check(llms.includes(`${site.origin}/${route}/`), `llms.txt: missing /${route}/`);
+}
 
 if (failures.length) {
   console.error(`Static validation failed with ${failures.length} issue(s):`);

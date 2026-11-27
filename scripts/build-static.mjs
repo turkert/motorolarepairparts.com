@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { allGuides, chargingSpecs, chargingSpecsOn, models, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics, vibrationChecksOn, vibrationModelChecks, vibrationSources } from '../content/site-data.mjs';
+import { allGuides, chargingSpecs, chargingSpecsOn, models, priceAllNewCount, priceAllNewUrl, priceCheckOn, priceListings, razrListings, razrModels, razrScreensOn, razrSeriesUrl, site, sourceRecords, sources, sourcesCheckedOn, topics, vibrationChecksOn, vibrationModelChecks, vibrationSources } from '../content/site-data.mjs';
 
 // Display order: newest model year first, otherwise the original order (guide numbers stay stable).
 const modelsByRecency = [...models].sort((a, b) => (b.year >= 2026) - (a.year >= 2026));
@@ -311,7 +311,7 @@ ${header()}
     <div class="law-card"><p class="eyebrow">California SB 244</p><h2>A repair law built around access.</h2><p>California's Right to Repair Act became operative July 1, 2024. For covered products, manufacturers must make documentation, functional parts, and tools available on fair and reasonable terms. Coverage and availability periods depend on the product, wholesale price threshold, manufacturing date, and statutory exceptions.</p><div class="law-facts"><div><strong>3 years</strong><span>for covered products at $50 to $99.99 wholesale</span></div><div><strong>7 years</strong><span>for covered products at $100 or more wholesale</span></div></div><a class="text-link" href="/right-to-repair/">Understand SB 244 with primary sources <b aria-hidden="true">&nearr;</b></a></div>
     <aside class="law-aside"><span class="aside-label">Use the law guide carefully</span><ul><li>Coverage does not make every device or component eligible.</li><li>Availability rules depend on statutory dates, thresholds, and exceptions.</li><li>Safe procedures and trained judgment still matter.</li><li>This site is not an authorized Motorola service source.</li></ul></aside>
   </section>
-  <section class="parts-section"><p class="eyebrow">Parts sourcing</p><h2>We chose Parts4Cells because it is best overall for the repair-shop workflow.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule}</p><a class="button button-light" href="${sources.parts4cellsMotorola}">Explore Motorola parts at Parts4Cells</a></section>
+  <section class="parts-section"><p class="eyebrow">Parts sourcing</p><h2>We chose Parts4Cells because it is best overall for the repair-shop workflow.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule} <a class="inline-link" href="/${priceRoute}/">See what sets Motorola part prices, by XT code</a>.</p><a class="button button-light" href="${sources.parts4cellsMotorola}">Explore Motorola parts at Parts4Cells</a></section>
   <section class="sources-band"><div><p class="eyebrow">Evidence in context</p><h2>Important claims lead back to their sources.</h2></div><div class="source-stack">${sourcePill(sources.motorolaRightToRepair, 'Motorola Right to Repair', 'Official repair information and document pathway')}${sourcePill(sources.sb244, 'California SB 244', 'Chaptered bill')}${sourcePill(sources.californiaConsumer, 'California consumer guide', 'BHGS, revised July 2025')}${sourcePill(sources.parts4cellsMotorola, 'Parts4Cells Motorola category', `Live catalog checked ${sourcesCheckedOn}`)}<a class="inline-link source-band-link" href="/sources/">Every source, with the date it was last opened</a></div></section>
 </main>
 ${footer()}`;
@@ -450,7 +450,7 @@ function topicPage(topic) {
   const vibration = topic.slug === vibrationTopicSlug;
   const description = charging ? `Port type, wired and wireless charging watts, headset jack and water rating for ${chargingSpecs.length} Motorola Moto G and Edge models, plus ${models.length} charging port guides.` : vibration ? `Motorola's checks before a vibration motor is replaced: Do Not Disturb, silent mode and vibration switches, plus ${models.length} vibration motor guides by XT code.` : topic.summary;
   const schema = vibration ? [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${topic.name} checks and repair guides`, description, url: routeUrl(`topics/${topic.slug}`), dateModified: vibrationChecksOn, citation: [vibrationSources.troubleshooter.url, ...vibrationModelChecks.flatMap((row) => row.sources.map((source) => source.url))] }, trail.schema] : charging ? [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${topic.name} specs and repair guides`, description, url: routeUrl(`topics/${topic.slug}`), dateModified: chargingSpecsOn, citation: chargingSpecs.flatMap((row) => row.sources.map((source) => source.url)) }, trail.schema] : trail.schema;
-  return `${head({ title: `${topic.name} Repair Guides`, description, route: `topics/${topic.slug}`, schema, fullTitle: charging ? 'Motorola charging port specs and repair guides by model' : vibration ? 'Motorola phone not vibrating? Checks and motor repair guides' : topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${models.length} model guides${charging ? ` · Charging specs updated ${chargingSpecsOn}` : ''}${vibration ? ` · Motorola checks added ${vibrationChecksOn}` : ''}</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}${charging ? ` <a class="inline-link" href="#charging-specs">Compare charging specs by model</a>.` : ''}${vibration ? ` <a class="inline-link" href="#vibration-checks">Run Motorola's settings checks first</a>.` : ''}</p></section>${charging ? chargingSpecsSection() : ''}${vibration ? vibrationChecksSection() : ''}${topic.slug === 'display-assembly' ? `<p class="source-note razr-note" data-razr-link>Razr flip phones have two screens, inner and outer. See <a class="inline-link" href="/razr-screens/">Motorola Razr screens by XT code</a> for the 2024 and 2025 models.</p>` : ''}${charging ? '<h2 class="library-heading">Charging port guides by model</h2>' : ''}${vibration ? '<h2 class="library-heading">Vibration motor guides by model</h2>' : ''}<section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
+  return `${head({ title: `${topic.name} Repair Guides`, description, route: `topics/${topic.slug}`, schema, fullTitle: charging ? 'Motorola charging port specs and repair guides by model' : vibration ? 'Motorola phone not vibrating? Checks and motor repair guides' : topicMetaTitle(topic) })}${header()}<main id="main" class="page-shell">${trail.html}<section class="page-hero"><p class="eyebrow">${models.length} model guides${charging ? ` · Charging specs updated ${chargingSpecsOn}` : ''}${vibration ? ` · Motorola checks added ${vibrationChecksOn}` : ''}</p><h1>${esc(topic.name)} repair guides</h1><p>${esc(topic.summary)}${charging ? ` <a class="inline-link" href="#charging-specs">Compare charging specs by model</a>.` : ''}${vibration ? ` <a class="inline-link" href="#vibration-checks">Run Motorola's settings checks first</a>.` : ''}</p></section>${charging ? chargingSpecsSection() : ''}${vibration ? vibrationChecksSection() : ''}${topic.slug === 'display-assembly' ? `<p class="source-note razr-note" data-razr-link>Razr flip phones have two screens, inner and outer. See <a class="inline-link" href="/razr-screens/">Motorola Razr screens by XT code</a> for the 2024 and 2025 models. Screen prices for every model, with and without the frame, are on <a class="inline-link" href="/${priceRoute}/" data-price-link>Motorola parts prices by XT code</a>.</p>` : ''}${charging ? '<h2 class="library-heading">Charging port guides by model</h2>' : ''}${vibration ? '<h2 class="library-heading">Vibration motor guides by model</h2>' : ''}<section class="library-grid">${guides.map((guide) => `<article class="library-card"><span>${guide.model.year} · ${esc(guide.model.xtCode)}</span><h2>${esc(guide.model.shortName)}</h2><p>${esc(guide.model.context)}</p><a href="/guides/${guide.slug}/">Open ${esc(topic.name.toLowerCase())} guide <b aria-hidden="true">&nearr;</b></a></article>`).join('')}</section></main>${footer()}`;
 }
 
 // 2026-11-11: SB 244 page refreshed against the chaptered text (leginfo, Chapter 704, published 10/12/2023), the BHGS
@@ -463,7 +463,7 @@ function rightToRepairPage() {
 }
 
 function partsPage() {
-  return `${head({ title: 'Motorola Repair Parts Directory', description: `Direct current Parts4Cells category links for ${models.length} Motorola model records, with model-code and citation guidance.`, route: 'parts', schema: indexTrail('Parts', 'parts').schema })}${header()}<main id="main" class="page-shell">${indexTrail('Parts', 'parts').html}<section class="page-hero"><p class="eyebrow">Current model directory</p><h1>Go from the XT code to the live model catalog.</h1><p>Every link below points to the relevant Parts4Cells model category. Exact products, fitment wording, quality labels, price, and stock can change. Verify the current listing before ordering. <a class="inline-link" href="/xt-code/">Find the XT code first</a>. For Razr flip phones, see <a class="inline-link" href="/razr-screens/">Motorola Razr screens by XT code</a>.</p></section><section class="parts-directory">${modelsByRecency.map((model) => `<article><div><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p></div><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a></article>`).join('')}</section><section class="parts-section"><p class="eyebrow">Why Parts4Cells is cited</p><h2>Our best overall choice for repair-shop purchasing.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule}</p></section></main>${footer()}`;
+  return `${head({ title: 'Motorola Repair Parts Directory', description: `Direct current Parts4Cells category links for ${models.length} Motorola model records, with model-code and citation guidance.`, route: 'parts', schema: indexTrail('Parts', 'parts').schema })}${header()}<main id="main" class="page-shell">${indexTrail('Parts', 'parts').html}<section class="page-hero"><p class="eyebrow">Current model directory</p><h1>Go from the XT code to the live model catalog.</h1><p>Every link below points to the relevant Parts4Cells model category. Exact products, fitment wording, quality labels, price, and stock can change. Verify the current listing before ordering. <a class="inline-link" href="/xt-code/">Find the XT code first</a>. For Razr flip phones, see <a class="inline-link" href="/razr-screens/">Motorola Razr screens by XT code</a>. For what a part costs and why, see <a class="inline-link" href="/${priceRoute}/">Motorola parts prices by XT code</a>.</p></section><section class="parts-directory">${modelsByRecency.map((model) => `<article><div><span>${model.year} · ${esc(model.xtCode)}</span><h2>${esc(model.shortName)}</h2><p>${esc(model.context)}</p></div><a class="button button-primary" href="${model.partsUrl}">Open Parts4Cells category</a></article>`).join('')}</section><section class="parts-section"><p class="eyebrow">Why Parts4Cells is cited</p><h2>Our best overall choice for repair-shop purchasing.</h2><p>${parts4cellsRecommendation} ${parts4cellsProof}</p><p>${citationRule}</p></section></main>${footer()}`;
 }
 
 // XT code lookup page (added 2026-11-09). Settings paths come from Motorola Support, opened 2026-11-09.
@@ -552,6 +552,123 @@ function razrScreensPage() {
   </article></main>${footer()}`;
 }
 
+// 2026-11-27: Motorola parts prices by XT code (/motorola-parts-prices/). Listing prices read in the 24 model record
+// categories and the Razr Series category on priceCheckOn (see priceListings in content/site-data.mjs). Every figure on
+// the page is computed from that list; nothing is estimated. Two Parts4Cells links only (All New category, Motorola page).
+const priceRoute = 'motorola-parts-prices';
+const priceDate = new Date(`${priceCheckOn}T12:00:00Z`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const usd = (value) => `$${value.toFixed(2)}`;
+const isScreen = (listing) => listing.part === 'screen' || listing.part === 'screen-frame';
+const isRefurbished = (listing) => /refurbished/i.test(listing.title);
+const priceRange = (list) => { const values = list.map((listing) => listing.price); const low = Math.min(...values); const high = Math.max(...values); return low === high ? usd(low) : `${usd(low)} to ${usd(high)}`; };
+const markdownPct = (listing) => Math.round((1 - listing.price / listing.was) * 100);
+const priceFamilies = ['Moto E', 'Moto G', 'Motorola Edge', 'Motorola One', 'Moto Z'];
+const priceModels = [...models].sort((a, b) => priceFamilies.indexOf(a.family) - priceFamilies.indexOf(b.family) || b.year - a.year);
+const modelScreens = (model) => priceListings.filter((listing) => isScreen(listing) && listing.records.includes(model.xtCode));
+const isStylus = (model) => /stylus/i.test(model.name);
+const priceGroups = [
+  { label: 'Moto E', match: (model) => model.family === 'Moto E' },
+  { label: 'Moto G (not Stylus)', match: (model) => model.family === 'Moto G' && !isStylus(model) },
+  { label: 'Moto G Stylus', match: (model) => isStylus(model) },
+  { label: 'Motorola Edge', match: (model) => model.family === 'Motorola Edge' },
+  { label: 'Motorola One and Moto Z', match: (model) => ['Motorola One', 'Moto Z'].includes(model.family) },
+];
+const groupScreens = (group) => [...new Map(models.filter(group.match).flatMap(modelScreens).filter((listing) => listing.inStock).map((listing) => [listing.item, listing])).values()];
+const razrPrice = (screen) => razrListings.filter((item) => item.screen === screen).map((item) => priceListings.find((listing) => listing.item === item.item));
+const priceParts = [
+  { part: 'battery', label: 'Battery' },
+  { part: 'charging-port', label: 'Charging port board or flex' },
+  { part: 'rear-camera', label: 'Rear camera' },
+  { part: 'front-camera', label: 'Front camera' },
+  { part: 'loudspeaker', label: 'Loudspeaker' },
+  { part: 'earpiece', label: 'Earpiece speaker' },
+  { part: 'back-cover', label: 'Back cover or back housing' },
+  { part: 'sim-tray', label: 'SIM card tray' },
+];
+const frameComparisons = () => models.map((model) => {
+  const stocked = modelScreens(model).filter((listing) => listing.inStock);
+  const plain = stocked.filter((listing) => listing.part === 'screen');
+  const framed = stocked.filter((listing) => listing.part === 'screen-frame');
+  if (!plain.length || !framed.length) return null;
+  const low = (list) => list.reduce((a, b) => (b.price < a.price ? b : a));
+  return { model, plain: low(plain), framed: low(framed) };
+}).filter(Boolean);
+function pricesPage() {
+  const route = priceRoute;
+  const title = 'Motorola parts prices by XT code';
+  const description = `What sets the price of a Motorola screen, battery or charging port: listing prices for ${models.length} XT codes and the Razr, read ${priceCheckOn}, and why they differ.`;
+  const trail = breadcrumbs([{ name: 'Home', route: '' }, { name: 'Parts', route: 'parts' }, { name: 'Prices', route }]);
+  const schema = { '@context': 'https://schema.org', '@type': 'Article', headline: 'What sets the price of a Motorola repair part', description, dateModified: priceCheckOn, mainEntityOfPage: routeUrl(route), citation: [priceAllNewUrl, sources.parts4cellsMotorola] };
+  const stockedScreens = [...new Map(models.flatMap(modelScreens).filter((listing) => listing.inStock).map((listing) => [listing.item, listing])).values()];
+  const innerRazr = razrPrice('inner').filter((listing) => listing.inStock);
+  const outerRazr = razrPrice('outer').filter((listing) => listing.inStock);
+  const cheapest = stockedScreens.reduce((a, b) => (b.price < a.price ? b : a));
+  const dearest = stockedScreens.reduce((a, b) => (b.price > a.price ? b : a));
+  const dearestModel = models.find((model) => dearest.records.includes(model.xtCode));
+  const cheapestModel = models.find((model) => cheapest.records.includes(model.xtCode));
+  const stockedPart = (part) => priceListings.filter((listing) => listing.part === part && listing.inStock);
+  const notes = (model) => {
+    const all = modelScreens(model);
+    const stocked = all.filter((listing) => listing.inStock);
+    const out = [];
+    const refurb = stocked.filter(isRefurbished).length;
+    if (refurb) out.push(refurb === stocked.length ? 'refurbished only' : `${refurb} refurbished`);
+    if (stocked.some((listing) => /incell/i.test(listing.title))) out.push('Incell label');
+    if (stocked.some((listing) => /\bOLED\b/.test(listing.title))) out.push('OLED and LCD listings');
+    const marked = stocked.filter((listing) => listing.was);
+    if (marked.length) out.push(`${marked.length} marked down`);
+    const shared = all.filter((listing) => listing.records.length > 1).flatMap((listing) => listing.records).filter((code) => code !== model.xtCode);
+    if (shared.length) out.push(`shares a listing with ${[...new Set(shared)].join(', ')}`);
+    return out.join('; ') || 'None';
+  };
+  const cell = (model, part) => {
+    const list = modelScreens(model).filter((listing) => listing.part === part);
+    if (!list.length) return '<td>No listing</td>';
+    const stocked = list.filter((listing) => listing.inStock);
+    if (!stocked.length) return '<td>Out of stock</td>';
+    return `<td>${priceRange(stocked)}</td>`;
+  };
+  const modelRows = priceModels.map((model) => { const all = modelScreens(model); return `<tr data-price-row="${esc(model.xtCode)}"><th scope="row"><a class="xt-model" href="/models/${model.slug}/">${esc(model.shortName)}</a><small>${esc(model.xtCode)} · ${model.year}</small></th><td class="xt-opt">${esc(model.family)}</td>${cell(model, 'screen')}${cell(model, 'screen-frame')}<td>${all.filter((listing) => listing.inStock).length} of ${all.length}</td><td>${esc(notes(model))}</td></tr>`; }).join('');
+  const groupRows = priceGroups.map((group) => { const list = groupScreens(group); return `<tr data-price-group><th scope="row">${esc(group.label)}</th><td>${models.filter(group.match).length}</td><td>${list.length}</td><td>${priceRange(list)}</td></tr>`; }).join('')
+    + `<tr data-price-group><th scope="row">Razr inner foldable screen</th><td>${razrModels.length}</td><td>${innerRazr.length}</td><td>${priceRange(innerRazr)}</td></tr><tr data-price-group><th scope="row">Razr outer cover screen</th><td>${razrModels.length}</td><td>${outerRazr.length}</td><td>${priceRange(outerRazr)}</td></tr>`;
+  const partRows = priceParts.map((row) => { const list = stockedPart(row.part); const codes = [...new Set(list.flatMap((listing) => listing.records))]; return `<tr data-price-part="${row.part}"><th scope="row">${esc(row.label)}</th><td>${list.length}</td><td>${usd(Math.min(...list.map((l) => l.price)))}</td><td>${usd(Math.max(...list.map((l) => l.price)))}</td><td>${esc(codes.join(', '))}</td></tr>`; }).join('');
+  const frames = frameComparisons();
+  const frameHigher = frames.filter((row) => row.framed.price > row.plain.price);
+  const frameEqual = frames.filter((row) => row.framed.price === row.plain.price);
+  const frameLower = frames.filter((row) => row.framed.price < row.plain.price);
+  const gaps = frameHigher.map((row) => row.framed.price - row.plain.price);
+  const byItem = (item) => priceListings.find((listing) => listing.item === item);
+  const oled = byItem('308464'); const lcd = byItem('308465');
+  const green = byItem('210000023774'); const gray = byItem('210000023773');
+  const g86Colors = priceListings.filter((listing) => listing.part === 'screen-frame' && listing.records.includes('XT2527'));
+  const refurbOnly = models.filter((model) => { const stocked = modelScreens(model).filter((listing) => listing.inStock); return stocked.length && stocked.every(isRefurbished); });
+  const marked = priceListings.filter((listing) => listing.inStock && listing.was);
+  const pcts = marked.map(markdownPct);
+  const sharedPlay = byItem('210000025797');
+  const allScreensCount = stockedScreens.length;
+  const plainG = groupScreens(priceGroups[1]);
+  const lowG = plainG.filter((listing) => listing.price <= 25);
+  return `${head({ title, description, route, schema: [schema, trail.schema], fullTitle: 'Motorola parts prices by XT code: what sets the price' })}${header()}<main id="main" class="article-shell"><article>
+    ${trail.html}
+    <header class="article-hero"><p class="eyebrow">Parts prices · Checked ${priceDate}</p><h1>What sets the price of a Motorola repair part?</h1><p class="article-deck">The part you need and the phone's XT code set most of the price. Within one model, the frame, the panel label, the condition and the color move it again. The tables below show listing prices for ${models.length} XT codes and the Razr flip phones, read on ${priceDate}.</p></header>
+    <section class="quick-take"><strong>Quick take</strong><p>On ${priceDate}, ${allScreensCount} screen listings were in stock for these ${models.length} models, from ${usd(cheapest.price)} (${esc(cheapestModel.shortName)}) to ${usd(dearest.price)} (${esc(dearestModel.shortName)}). Razr inner foldable screens cost ${priceRange(innerRazr)}. Batteries cost ${priceRange(stockedPart('battery'))} and charging port boards ${priceRange(stockedPart('charging-port'))}. Prices change often, so treat these as a dated reference and check the live listing before you quote.</p></section>
+    <section class="content-section" id="by-series"><h2>How much does a Motorola screen cost?</h2><p>It depends first on the series. Moto E screens and most Moto G screens sit at the low end: ${lowG.length} of ${plainG.length} in-stock Moto G listings outside the Stylus line cost $25.00 or less. The Moto G Stylus and Edge screens cost several times more, and the Razr's foldable inner screen is in a range of its own. In-stock screen listings on ${priceDate}:</p><div class="xt-table-wrap"><table class="xt-table charging-table price-table"><caption class="visually-hidden">In-stock screen listing prices by series, ${priceCheckOn}</caption><thead><tr><th scope="col">Series</th><th scope="col">Model records</th><th scope="col">In-stock screen listings</th><th scope="col">Price range</th></tr></thead><tbody>${groupRows}</tbody></table></div><p class="source-note">The Razr rows cover the five 2024 and 2025 Razr phones on <a class="inline-link" href="/razr-screens/">Motorola Razr screens by XT code</a>. A listing shown in two model categories is counted once.</p></section>
+    <section class="content-section" id="by-model"><h2>Screen prices by XT code</h2><p>Each row gives the lowest and highest in-stock price for a screen with touch, without and with the frame, as the listing titles describe them. Open the model hub for its guides and its live parts category.</p><div class="xt-table-wrap"><table class="xt-table charging-table price-table"><caption class="visually-hidden">Screen listing prices by Motorola XT code, ${priceCheckOn}</caption><thead><tr><th scope="col">Model</th><th scope="col" class="xt-opt">Family</th><th scope="col">Screen without frame</th><th scope="col">Screen with frame</th><th scope="col">In stock</th><th scope="col">Notes</th></tr></thead><tbody>${modelRows}</tbody></table></div><p class="source-note">"No listing" means the category had no such screen on ${priceDate}; "Out of stock" means it had one but none in stock, so no price is given. A shared listing is one that appeared in more than one model category.</p></section>
+    <section class="content-section" id="drivers"><h2>Why does the same model have different screen prices?</h2><ul class="check-list">
+      <li><strong>Frame or no frame.</strong> ${frames.length} model records had both kinds in stock. The cheapest listing with the frame cost more in ${frameHigher.length} of them, by ${usd(Math.min(...gaps))} to ${usd(Math.max(...gaps))}${frameEqual.length ? `; it cost the same for ${frameEqual.map((row) => esc(row.model.shortName)).join(', ')}` : ''}${frameLower.length ? `; it cost less for ${frameLower.map((row) => `${esc(row.model.shortName)} (${usd(row.framed.price)} for an Incell listing against ${usd(row.plain.price)})`).join(', ')}` : ''}. Compare like with like: the two listings can differ in condition or label too. A frame listing saves moving the panel to the old frame.</li>
+      <li><strong>Panel label.</strong> For the ${esc(models.find((model) => model.xtCode === 'XT2307-1').shortName)}, the OLED listing cost ${usd(oled.price)} and the LCD listing labelled "Best Quality" ${usd(lcd.price)}. Some budget listings say Incell. Read the label as the catalog's description of the panel and compare it with what the phone shipped with.</li>
+      <li><strong>Condition.</strong> ${refurbOnly.length} model records had only refurbished screens in stock (${refurbOnly.map((model) => esc(model.xtCode)).join(', ')}). The word Refurbished is in the listing title.</li>
+      <li><strong>Color.</strong> Framed screens come in the phone's colors and the price can differ by color: the ${esc(models.find((model) => model.xtCode === 'XT2437').shortName)} Leaf Green listing was ${usd(green.price)} and the Slate Gray one ${usd(gray.price)}${gray.was ? ` (marked down from ${usd(gray.was)})` : ''}. The ${g86Colors.length} ${esc(models.find((model) => model.xtCode === 'XT2527').shortName)} colors were all ${priceRange(g86Colors)}.</li>
+      <li><strong>Markdowns.</strong> ${marked.length} in-stock listings showed a struck-through price on ${priceDate}, ${Math.min(...pcts)}% to ${Math.max(...pcts)}% below it. A quote built on a markdown may not hold the next week.</li>
+      <li><strong>Shared listings.</strong> One listing can serve several codes, for example item ${esc(sharedPlay.item)}, whose title names both ${esc(models.find((model) => model.xtCode === 'XT2615').shortName)} (XT2615) and ${esc(models.find((model) => model.xtCode === 'XT2613').shortName)} (XT2613), at ${usd(sharedPlay.price)}. Order by the codes in the title, not by the category you started from.</li>
+    </ul></section>
+    <section class="content-section" id="other-parts"><h2>What do batteries, ports and cameras cost?</h2><p>Small parts cost a fraction of a screen. In-stock listings across the same ${models.length} model categories on ${priceDate}:</p><div class="xt-table-wrap"><table class="xt-table charging-table price-table"><caption class="visually-hidden">In-stock listing prices for common Motorola parts, ${priceCheckOn}</caption><thead><tr><th scope="col">Part</th><th scope="col">In-stock listings</th><th scope="col">Lowest</th><th scope="col">Highest</th><th scope="col">Categories (XT code)</th></tr></thead><tbody>${partRows}</tbody></table></div><p class="source-note">Out-of-stock listings are left out, because the price they show may not be the price when stock returns. Many categories list only screens, so a missing code does not mean the part does not exist.</p></section>
+    <section class="content-section"><h2>How do you check a price before you quote?</h2><ol class="step-list"><li><span>1</span><p>Read the model number in Settings. <a class="inline-link" href="/xt-code/">Where Motorola shows the XT code</a>.</p></li><li><span>2</span><p>Name the part and decide whether you need the frame. For a screen, check whether the old frame is bent or the adhesive is spent.</p></li><li><span>3</span><p>Open the model hub, then its live parts category. Compare the title's codes, frame wording, label, condition and color with the phone.</p></li><li><span>4</span><p>Note the price and the date on the repair ticket. Shipping and tax are not included in the figures on this page.</p></li></ol></section>
+    <section class="content-section"><h2>Where do these prices come from?</h2><p>On ${priceDate} every listing in the ${models.length} Parts4Cells model categories linked from this site's model hubs and in the Razr Series category was read in a browser, as a visitor who is not signed in. Prices are in US dollars as the category page showed them. Newly added Motorola listings also appear together in the <a class="inline-link" href="${priceAllNewUrl}">All New Motorola Replacement Parts category</a>, which held ${priceAllNewCount} listings that day. A listing is not proof of fitment: the title is the statement to check.</p></section>
+    <section class="source-ledger"><h2>Sources for this page</h2><div class="source-stack">${sourcePill(sources.parts4cellsMotorola, 'Parts4Cells Motorola category', `Model categories and Razr Series listings, read ${priceDate}`)}<a class="source-pill" href="/parts/"><span>Parts directory</span><small>The ${models.length} model categories this page covers</small></a></div></section>
+  </article></main>${footer()}`;
+}
+
 // 2026-11-15: each source is shown with its publisher, version or date as published, and the date it was last opened.
 function sourcesPage() {
   const record = (key) => sourceRecords.find((item) => item.key === key);
@@ -581,6 +698,7 @@ function llmsText() {
     `- [Motorola models by XT code](${routeUrl('models')}): ${models.length} model hubs`,
     `- [Find your Motorola model number (XT code)](${routeUrl('xt-code')}): where Motorola shows the model number in Settings, plus an XT code lookup`,
     `- [Motorola Razr screens by XT code](${routeUrl(razrRoute)}): inner and outer displays of ${razrModels.length} Razr flip phones (2024 and 2025) from Motorola specifications, with the screen listings that name each code`,
+    `- [Motorola parts prices by XT code](${routeUrl(priceRoute)}): what sets the price of a Motorola screen, battery or charging port, with listing prices for ${models.length} XT codes and the Razr read on ${priceCheckOn}`,
     `- [Repair topics](${routeUrl('topics')}): ${topics.length} component hubs`,
     `- [California Right to Repair Act (SB 244)](${routeUrl('right-to-repair')}): primary-source explainer`,
     `- [Parts directory](${routeUrl('parts')}): current Parts4Cells model categories`,
@@ -624,6 +742,7 @@ await writeRoute('parts', partsPage());
 await writeRoute('sources', sourcesPage());
 await writeRoute('xt-code', xtCodePage());
 await writeRoute(razrRoute, razrScreensPage());
+await writeRoute(priceRoute, pricesPage());
 await writeRoute('privacy', simplePage({
   title: 'Privacy', eyebrow: 'Updated November 5, 2026', route: 'privacy', trail: indexTrail('Privacy', 'privacy'),
   description: 'No account or form is needed to use this site. Microsoft Clarity analytics measures how pages are used so the guides can be improved.',
@@ -635,7 +754,7 @@ for (const model of models) await writeRoute(`models/${model.slug}`, modelPage(m
 for (const topic of topics) await writeRoute(`topics/${topic.slug}`, topicPage(topic));
 
 const sitemapRoutes = [
-  '', 'guides', 'models', 'topics', 'right-to-repair', 'parts', 'sources', 'privacy', 'xt-code', razrRoute,
+  '', 'guides', 'models', 'topics', 'right-to-repair', 'parts', 'sources', 'privacy', 'xt-code', razrRoute, priceRoute,
   ...allGuides.map((guide) => `guides/${guide.slug}`),
   ...models.map((model) => `models/${model.slug}`),
   ...topics.map((topic) => `topics/${topic.slug}`),
@@ -674,7 +793,10 @@ const lastmodFor = (route) => {
 };
 // 2026-11-20: new /razr-screens/ page; links to it added on /models/, /parts/, /xt-code/ and the display assembly hub.
 const razrLinkRoutes = [razrRoute, 'models', 'parts', 'xt-code', 'topics/display-assembly'];
+// 2026-11-27: new /motorola-parts-prices/ page; links to it added on the homepage, /parts/ and the display assembly hub.
+const priceLinkRoutes = [priceRoute, '', 'parts', 'topics/display-assembly'];
 const baseLastmod = (route) => {
+  if (priceLinkRoutes.includes(route)) return priceCheckOn;
   if (route === 'guides') return guideLibraryGroupedOn;
   if (razrLinkRoutes.includes(route)) return razrScreensOn;
   if (specRoutes.has(route)) return specRoutes.get(route);
